@@ -1,0 +1,20 @@
+begin
+	func f(Bool a, Bool b, Bool c) Bool
+		if  (a) 
+			if (b) 
+				return verdadeiro;
+			else
+				return c;
+			end if   
+		end if 
+		return falso;
+	end func
+
+	main
+		if  (f(verdadeiro, falso, verdadeiro);) 
+			escreva("f é verdadeiro");
+		else
+			escreva("f é falso");
+		end if 
+	end main
+end

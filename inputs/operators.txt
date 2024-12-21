@@ -1,0 +1,7 @@
+begin
+    var
+       Bool name = 2 + (3 * 5) ^ 3 == x or not 120 >= x;    
+    end var
+    main
+    end main
+end

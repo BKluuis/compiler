@@ -1,0 +1,42 @@
+begin
+  func swap (Array <Int> data, Int a, Int b) 
+	var 
+		Int temp;
+	end var
+	
+	temp = data[a];
+	data[a] = data[b];
+	data[b] = temp;
+  end func
+
+  func quickSort (Array <Int> data, Int low, Int high) 
+	var
+		Int left = low;
+		Int right = high;
+		Int pivot = high;
+	end var
+	
+	if (low >= high) 
+		return;
+	end if
+	
+	while (left != right)
+		while (data[left] <= data[pivot] && left < right)
+			left += 1;
+		end while
+		
+		while (data[right] >= data[pivot] && right <left)
+			right -= 1;
+		end while
+
+	swap(data, left, right);
+	end while
+	
+	swap(data, left, pivot);
+	quickSort(data, low, left - 1);
+	quickSort(data, left + 1, high);
+  end func
+	
+  main 
+	return; 
+end
