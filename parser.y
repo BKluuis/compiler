@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "../lib/record.h"
+#include "../lib/tree.h"
 
 int yylex(void);
 int yyerror(char *s);
@@ -20,6 +21,7 @@ char * cat(char *, char *, char *, char *, char *);
 %union {
 	char * text;  /* string value */
 	struct record * rec;
+        struct Node * node;
 };
 
 
@@ -38,14 +40,16 @@ char * cat(char *, char *, char *, char *, char *);
 %left AND
 %right NOT
 
+%nonassoc LESS_THAN MORE_THAN LESS_OR_EQUAL MORE_OR_EQUAL EQUALS NOT_EQUAL
 %left ADD MINUS
 %left MULT DIV DIV_REMAINDER DIV_QUOTIENT
 %right EXP
-%nonassoc LESS_THAN MORE_THAN LESS_OR_EQUAL MORE_OR_EQUAL EQUALS NOT_EQUAL
+/*Esse token nunca é retornada pelo lexer, mas é usada para dar maior precedência à regra : - expression*/
+%left UMINUS 
 
 /* %type <rec> variables_block variables declaration initialization assignment assignments subprogs subprog parameters parameter main commands command if elif_condition else_condition switch cases cases_opt for while dowhile variable_valued return expression literal call expressions  */
 
-/* %type <node> expression literal */
+%type <node> expression literal declared
 
 %start prog
 
@@ -63,24 +67,28 @@ variables :                                    {}
           ;
 
 /* Define a variável sem iniciar */
-declaration : TYPE ID         {}
-            | CONST TYPE ID   {}
+declaration : TYPE array_op ID         {}
+            | CONST TYPE array_op ID   {}
             ;
 
 /* Define a variável e inicia */
-initialization : TYPE ID ASSIGNMENT expression {}
+initialization : TYPE array_op ID ASSIGNMENT expression {}
                ;
+
+array_op :                                 {}
+         | LESS_THAN TYPE MORE_THAN        {}
+         ;
 
 /* Muda o valor de uma variável, checar se variavel existe */
 assignments : assignment SEMICOLON {}
             | assignment SEMICOLON assignments   {}
             ;
 
-assignment : ID PLUS_ASSIGNMENT expression       {}
-           | ID MINUS_ASSIGNMENT expression      {}
-           | ID MULT_ASSIGNMENT expression       {}
-           | ID DIVIDE_ASSIGNMENT expression     {}
-           | ID ASSIGNMENT expression            {}
+assignment : declared PLUS_ASSIGNMENT expression       {}
+           | declared MINUS_ASSIGNMENT expression      {}
+           | declared MULT_ASSIGNMENT expression       {}
+           | declared DIVIDE_ASSIGNMENT expression     {}
+           | declared ASSIGNMENT expression            {}
            ;
 
 /* Uma lista de subprogramas potencialmente vazia */
@@ -94,13 +102,9 @@ subprog : FUNC ID PAREN_LEFT parameters PAREN_RIGHT TYPE variables_block command
 
 /* Uma lista de declarações separadas por vírgula potencialmente vazia  */
 parameters :           {}
-           | parameter {}
-           | parameter COMMA parameters {}
+           | declaration {}
+           | declaration COMMA parameters {}
            ;
-
-parameter : TYPE ID       {}
-          | CONST TYPE ID {}
-          ;
 
 main : MAIN commands END MAIN {}
      ;
@@ -109,23 +113,23 @@ commands :                   {}
          | command commands  {}
          ;
 
-command : assignments                 {}
-        | call                        {}
-        | if                         {}
-        | switch                     {}
-        | for                        {}
-        | while                      {}
-        | dowhile                    {}
-        | BREAK                      {} 
-        | CONTINUE                   {}
-        | return                     {}
+command : assignments                   {}
+        | call SEMICOLON                {}
+        | if                            {}
+        | switch                        {}
+        | for                           {}
+        | while                         {}
+        | dowhile                       {}
+        | BREAK                         {} 
+        | CONTINUE                      {}
+        | return                        {}
         ;          
 
 /* Checar o retorno */
 if : IF PAREN_LEFT expression PAREN_RIGHT commands elif_condition else_condition END IF {}
    ;
 
-elif_condition :                                                     {}
+elif_condition :                                                                {}
                | ELIF PAREN_LEFT expression PAREN_RIGHT commands elif_condition {}
                ;
 
@@ -134,61 +138,72 @@ else_condition :              {}
                ;
 
 switch : SWITCH PAREN_LEFT ID PAREN_RIGHT cases END SWITCH {}
+       ;
 
-cases :                  {}
-      | cases_opt DEFAULT commands     {}
+cases : 
+      | CASE PAREN_LEFT literal PAREN_RIGHT commands cases      {}
+      | DEFAULT commands cases    {}
       ;
 
-cases_opt :                                                {}
-          | CASE PAREN_LEFT literal PAREN_RIGHT commands cases {}
-          ;
-
-for : FOR PAREN_LEFT variable_valued SEMICOLON expression SEMICOLON expression PAREN_RIGHT commands END FOR {}
+for : FOR PAREN_LEFT initialization SEMICOLON expression SEMICOLON expression PAREN_RIGHT commands END FOR {}
+    | FOR PAREN_LEFT assignment SEMICOLON expression SEMICOLON expression PAREN_RIGHT commands END FOR {}
+    ;
 
 while : WHILE PAREN_LEFT expression PAREN_RIGHT commands END WHILE {}
+      ;
 
 dowhile : DO commands WHILE PAREN_LEFT expression PAREN_RIGHT END DO WHILE{}
-
-variable_valued : initialization {}
-                | assignment      {}
-                ;
+        ;
 
 return : RETURN SEMICOLON  
        | RETURN expression SEMICOLON {}
        ;
 
 /* Uma expressão, um valor */           
-expression : ID                                      {}
-           | literal                                 {}
-           | expression OR expression                {}
-           | expression AND expression               {}
-           | expression EQUALS expression            {}
-           | expression NOT_EQUAL expression         {}
-           | expression LESS_THAN expression         {}
-           | expression MORE_THAN expression         {}
-           | expression LESS_OR_EQUAL expression     {}
-           | expression MORE_OR_EQUAL expression     {}
-           | expression ADD expression               {}
-           | expression MINUS expression             {}
-           | expression MULT expression              {}
-           | expression DIV expression               {}
-           | expression DIV_QUOTIENT expression      {}
-           | expression DIV_REMAINDER expression     {}
-           | expression EXP expression               {}
-           | NOT expression                          {}
-           | PAREN_LEFT expression PAREN_RIGHT       {}
-           | call                                    {}
+expression : declared                                {$$ = createNode("declared"); addChild($$, $1);}
+           | literal                                 {$$ = createNode("literal"); addChild($$, $1);}
+           | expression OR expression                {$$ = createNode("OR"); addChild($$, $1); addChild($$, $3);}
+           | expression AND expression               {$$ = createNode("AND"); addChild($$, $1); addChild($$, $3);}
+           | expression EQUALS expression            {$$ = createNode("EQUALS"); addChild($$, $1); addChild($$, $3);}
+           | expression NOT_EQUAL expression         {$$ = createNode("NOT_EQUAL"); addChild($$, $1); addChild($$, $3);}
+           | expression LESS_THAN expression         {$$ = createNode("LESS_THAN"); addChild($$, $1); addChild($$, $3);}
+           | expression MORE_THAN expression         {$$ = createNode("MORE_THAN"); addChild($$, $1); addChild($$, $3);}
+           | expression LESS_OR_EQUAL expression     {$$ = createNode("LESS_OR_EQUAL"); addChild($$, $1); addChild($$, $3);}
+           | expression MORE_OR_EQUAL expression     {$$ = createNode("MORE_OR_EQUAL"); addChild($$, $1); addChild($$, $3);}
+           | expression ADD expression               {$$ = createNode("ADD"); addChild($$, $1); addChild($$, $3);}
+           | expression MINUS expression             {$$ = createNode("MINUS"); addChild($$, $1); addChild($$, $3);}
+           | expression MULT expression              {$$ = createNode("MULT"); addChild($$, $1); addChild($$, $3);}
+           | expression DIV expression               {$$ = createNode("DIV"); addChild($$, $1); addChild($$, $3);}
+           | expression DIV_QUOTIENT expression      {$$ = createNode("DIV_QUOTIENT"); addChild($$, $1); addChild($$, $3);}
+           | expression DIV_REMAINDER expression     {$$ = createNode("DIV_REMAINDER"); addChild($$, $1); addChild($$, $3);}
+           | expression EXP expression               {$$ = createNode("EXP"); addChild($$, $1); addChild($$, $3);}
+           | NOT expression                          {$$ = createNode("NOT"); addChild($$, $2);}
+           | MINUS expression %prec UMINUS           {$$ = createNode("UNARY MINUS"); addChild($$, $2);}
+           | PAREN_LEFT expression PAREN_RIGHT       {$$ = createNode("PARENTHESIS"); addChild($$, $2);}
+           | call                                    {$$ = createNode("call");}
            ;
 
-literal : INT_LIT     {}
-        | FLOAT_LIT   {}
-        | BOOL_LIT    {}
-        | STRING_LIT  {}
+/* Variáveis já declaradas */
+declared : ID              {$$ = createNode("ID"); addChild($$, createNode($1));}
+           /* Checar: tipo de expressão para a coleção, dimensão da coleção */
+         | ID collection_access {$$ = createNode("ARRAY"); addChild($$, createNode($1));} 
+         ; 
+
+literal : INT_LIT     {$$ = createNode("INT");}
+        | FLOAT_LIT   {$$ = createNode("FLOAT");}
+        | BOOL_LIT    {$$ = createNode("BOOL");}
+        | STRING_LIT  {$$ = createNode("STRING");}
         ;
 
-/* expressions : expression SEMICOLON expressions {} */
+/* Acessores de coleções */
+/* Associar: tipo da expressão de acesso */
+collection_access : SQUARE_LEFT expression SQUARE_RIGHT              {}
+                  | collection_access SQUARE_LEFT expression SQUARE_RIGHT {}
+                  ;
 
-call : ID PAREN_LEFT call_parameters PAREN_RIGHT SEMICOLON {}    
+/* Chamada para uma função */
+/*  */
+call : ID PAREN_LEFT call_parameters PAREN_RIGHT {}    
      ;  
 
 call_parameters : 
@@ -245,16 +260,4 @@ char * cat(char * s1, char * s2, char * s3, char * s4, char * s5){
 
 
         return output;
-}
-
-#define YYPRINT(file, type, value)   yyprint (file, type, value)
-
-static void
-yyprint (file, type, value)
-     FILE *file;
-     int type;
-     YYSTYPE value;
-{
-  if (type == TYPE || type == ID)
-    fprintf (file, " %s", value.text);
 }

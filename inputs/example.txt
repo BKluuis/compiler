@@ -2,7 +2,7 @@ begin
 	func f(Bool a, Bool b, Bool c) Bool
 		if  (a) 
 			if (b) 
-				return verdadeiro;
+				return true;
 			else
 				return c;
 			end if   
@@ -11,7 +11,14 @@ begin
 	end func
 
 	main
-		if  (f(verdadeiro, falso, verdadeiro);) 
+		switch(a)
+			case (1)
+
+			case (2)
+			default
+		end switch
+
+		if  (f(true, false, true), ) 
 			escreva("f é verdadeiro");
 		else
 			escreva("f é falso");

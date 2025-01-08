@@ -1,7 +1,9 @@
 begin
     var
-       Bool name = 2 + (3 * 5) ^ 3 == x or not 120 >= x;    
+        Bool name;
+        Int x = 10;
     end var
     main
+        name = 2 + (3 * 5) ^ 3 == x or not 120 >= x;    
     end main
 end

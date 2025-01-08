@@ -39,4 +39,5 @@ begin
 	
   main 
 	return; 
+  end main
 end
