@@ -1,0 +1,34 @@
+begin
+  func swap (Array <Int> data, Int a, Int b)
+    var 
+      Int temp;
+    end var
+    
+    temp = data[a];
+    data[a] = data[b];
+    data[b] = temp;
+  end func
+
+  func selectionSort (Array <Int> data, Int n)
+    var 
+      Int i, j, minIndex;
+    end var
+    
+    for (i = 0; i < n - 1; i++)
+      minIndex = i;  // Suponha que o menor valor está no índice i
+      for (j = i + 1; j < n; j++)
+        if (data[j] < data[minIndex])
+          minIndex = j;  // Encontrou um valor menor, atualiza minIndex
+        end if
+      end for
+      
+      if (minIndex != i)  // Só troca se minIndex foi alterado
+        swap(data, i, minIndex);
+      end if
+    end for
+  end func
+
+  main
+    return;
+  end main
+end

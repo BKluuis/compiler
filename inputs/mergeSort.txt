@@ -1,0 +1,68 @@
+begin
+  func merge (Array <Int> data, Int low, Int mid, Int high)
+    var 
+      Int leftSize = mid - low + 1;
+      Int rightSize = high - mid;
+      Array <Int> left[leftSize];
+      Array <Int> right[rightSize];
+      Int i = 0;
+      Int j = 0;
+      Int k = low;
+    end var
+    
+    // Copiar os dados para os arrays auxiliares left e right
+    for (i = 0; i < leftSize; i++)
+      left[i] = data[low + i];
+    end for
+    
+    for (j = 0; j < rightSize; j++)
+      right[j] = data[mid + 1 + j];
+    end for
+    
+    i = 0;
+    j = 0;
+    
+    // Combinar as duas metades ordenadas no array original
+    while (i < leftSize && j < rightSize)
+      if (left[i] <= right[j])
+        data[k] = left[i];
+        i += 1;
+      else
+        data[k] = right[j];
+        j += 1;
+      end if
+      k += 1;
+    end while
+    
+    // Copiar os elementos restantes de left[], se houver
+    while (i < leftSize)
+      data[k] = left[i];
+      i += 1;
+      k += 1;
+    end while
+    
+    // Copiar os elementos restantes de right[], se houver
+    while (j < rightSize)
+      data[k] = right[j];
+      j += 1;
+      k += 1;
+    end while
+  end func
+  
+  func mergeSort (Array <Int> data, Int low, Int high)
+    var 
+      Int mid;
+    end var
+    
+    if (low < high)
+      mid = (low + high) / 2;
+      mergeSort(data, low, mid);  // Recursivamente dividir a metade esquerda
+      mergeSort(data, mid + 1, high);  // Recursivamente dividir a metade direita
+      merge(data, low, mid, high);  // Mesclar as metades ordenadas
+    end if
+  end func
+
+  main
+    return;
+  end main
+end
