@@ -8,21 +8,21 @@ begin
       Int i = 0;
       Int j = 0;
       Int k = low;
-    end var
+    endvar
     
-    // Copiar os dados para os arrays auxiliares left e right
+    \* Copiar os dados para os arrays auxiliares left e right *\
     for (i = 0; i < leftSize; i++)
       left[i] = data[low + i];
-    end for
+    endfor
     
-    for (j = 0; j < rightSize; j++)
+    for (j = 0; j < rightSize; j += 1)
       right[j] = data[mid + 1 + j];
-    end for
+    endfor
     
     i = 0;
     j = 0;
     
-    // Combinar as duas metades ordenadas no array original
+    \* Combinar as duas metades ordenadas no array original *\
     while (i < leftSize && j < rightSize)
       if (left[i] <= right[j])
         data[k] = left[i];
@@ -30,39 +30,39 @@ begin
       else
         data[k] = right[j];
         j += 1;
-      end if
+      endif
       k += 1;
-    end while
+    endwhile
     
-    // Copiar os elementos restantes de left[], se houver
+    \* Copiar os elementos restantes de left[], se houver *\
     while (i < leftSize)
       data[k] = left[i];
       i += 1;
       k += 1;
-    end while
+    endwhile
     
-    // Copiar os elementos restantes de right[], se houver
+    \* Copiar os elementos restantes de right[], se houver *\
     while (j < rightSize)
       data[k] = right[j];
       j += 1;
       k += 1;
-    end while
-  end func
+    endwhile
+  endfunc
   
   func mergeSort (Array <Int> data, Int low, Int high)
     var 
       Int mid;
-    end var
+    endvar
     
     if (low < high)
       mid = (low + high) / 2;
-      mergeSort(data, low, mid);  // Recursivamente dividir a metade esquerda
-      mergeSort(data, mid + 1, high);  // Recursivamente dividir a metade direita
-      merge(data, low, mid, high);  // Mesclar as metades ordenadas
-    end if
-  end func
+      mergeSort(data, low, mid);  \* Recursivamente dividir a metade esquerda *\
+      mergeSort(data, mid + 1, high);  \* Recursivamente dividir a metade direita *\
+      merge(data, low, mid, high);  \* Mesclar as metades ordenadas *\
+    endif
+  endfunc
 
   main
     return;
-  end main
+  endmain
 end

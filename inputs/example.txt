@@ -18,7 +18,7 @@ begin
 			default
 		end switch
 
-		if  (f(true, false, true), ) 
+		if  (f(true, false, true)) 
 			escreva("f é verdadeiro");
 		else
 			escreva("f é falso");

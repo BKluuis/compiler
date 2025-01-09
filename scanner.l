@@ -52,7 +52,13 @@ alphanumeric ({alphabetic} | {digit})
 "while"                     {return WHILE;}
 "main"                      {return MAIN;}
 "begin"                     {return BEGIN_TOK;}
-"end"                       {return END;}
+"endfunc"                   {return ENDFUNC;}
+"endvar"                    {return ENDVAR;}
+"endmain"                   {return ENDMAIN;}
+"endif"                     {return ENDIF;}
+"endswitch"                 {return ENDSWITCH;}
+"endfor"                    {return ENDFOR;}
+"endwhile"                  {return ENDWHILE;}
 "var"                       {return VAR;}
 "dowhile"                   {return DO;}
 "if"                        {return IF;}
@@ -90,6 +96,7 @@ alphanumeric ({alphabetic} | {digit})
 ","                         {return COMMA;}                      
 [a-zA-Z][a-zA-Z0-9]*	      {yylval.text = strdup(yytext);
                               return ID;}
+\\\*.*\*\\                    {/* isso é um comentário */}
 .                           {yyerror("Invalid character");}
 
 %%

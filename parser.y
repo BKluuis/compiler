@@ -1,3 +1,5 @@
+/* CRIAR A TABELA DE SIMBOLOS, CRIAR PILHA */
+
 %{
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,8 +34,9 @@ char * cat(char *, char *, char *, char *, char *);
 %token <text> TYPE ID 
 %token SWITCH CASE DEFAULT
 %token WHILE FOR BREAK CONTINUE DO
-%token BEGIN_TOK END VAR SEMICOLON PAREN_LEFT PAREN_RIGHT SQUARE_LEFT SQUARE_RIGHT CURLY_LEFT CURLY_RIGHT COMMA
+%token BEGIN_TOK VAR SEMICOLON PAREN_LEFT PAREN_RIGHT SQUARE_LEFT SQUARE_RIGHT CURLY_LEFT CURLY_RIGHT COMMA
 %token IF ELIF ELSE
+%token ENDWHILE ENDFOR ENDFUNC ENDMAIN ENDVAR ENDIF ENDSWITCH END
 %token PLUS_ASSIGNMENT MINUS_ASSIGNMENT MULT_ASSIGNMENT DIVIDE_ASSIGNMENT ASSIGNMENT
 
 %left OR
@@ -58,7 +61,7 @@ prog : BEGIN_TOK  variables_block subprogs main END {}
      ;
 
 variables_block :                       {}
-                | VAR variables END VAR {}
+                | VAR variables ENDVAR {}
                 ;
 
 variables :                                    {}
@@ -67,8 +70,8 @@ variables :                                    {}
           ;
 
 /* Define a variável sem iniciar */
-declaration : TYPE array_op ID         {}
-            | CONST TYPE array_op ID   {}
+declaration : TYPE array_op ID array_size_op        {}
+            | CONST TYPE array_op ID array_size_op  {}
             ;
 
 /* Define a variável e inicia */
@@ -78,6 +81,10 @@ initialization : TYPE array_op ID ASSIGNMENT expression {}
 array_op :                                 {}
          | LESS_THAN TYPE MORE_THAN        {}
          ;
+
+array_size_op:                                          {}
+             | SQUARE_LEFT expression SQUARE_RIGHT      {}
+             ;
 
 /* Muda o valor de uma variável, checar se variavel existe */
 assignments : assignment SEMICOLON {}
@@ -96,8 +103,8 @@ subprogs :                  {}
          | subprog subprogs {} 
          ;
 
-subprog : FUNC ID PAREN_LEFT parameters PAREN_RIGHT TYPE variables_block commands END FUNC {}
-        | FUNC ID PAREN_LEFT parameters PAREN_RIGHT variables_block commands END FUNC {}
+subprog : FUNC ID PAREN_LEFT parameters PAREN_RIGHT TYPE variables_block commands ENDFUNC {}
+        | FUNC ID PAREN_LEFT parameters PAREN_RIGHT variables_block commands ENDFUNC {}
         ;
 
 /* Uma lista de declarações separadas por vírgula potencialmente vazia  */
@@ -106,10 +113,10 @@ parameters :           {}
            | declaration COMMA parameters {}
            ;
 
-main : MAIN commands END MAIN {}
+main : MAIN commands ENDMAIN {}
      ;
 
-commands :                   {}
+commands : command           {}
          | command commands  {}
          ;
 
@@ -126,7 +133,7 @@ command : assignments                   {}
         ;          
 
 /* Checar o retorno */
-if : IF PAREN_LEFT expression PAREN_RIGHT commands elif_condition else_condition END IF {}
+if : IF PAREN_LEFT expression PAREN_RIGHT commands elif_condition else_condition ENDIF {}
    ;
 
 elif_condition :                                                                {}
@@ -137,7 +144,7 @@ else_condition :              {}
                | ELSE commands    {}
                ;
 
-switch : SWITCH PAREN_LEFT ID PAREN_RIGHT cases END SWITCH {}
+switch : SWITCH PAREN_LEFT ID PAREN_RIGHT cases ENDSWITCH {}
        ;
 
 cases : 
@@ -145,14 +152,14 @@ cases :
       | DEFAULT commands cases    {}
       ;
 
-for : FOR PAREN_LEFT initialization SEMICOLON expression SEMICOLON expression PAREN_RIGHT commands END FOR {}
-    | FOR PAREN_LEFT assignment SEMICOLON expression SEMICOLON expression PAREN_RIGHT commands END FOR {}
+for : FOR PAREN_LEFT initialization SEMICOLON expression SEMICOLON expression PAREN_RIGHT commands ENDFOR {}
+    | FOR PAREN_LEFT assignment SEMICOLON expression SEMICOLON expression PAREN_RIGHT commands ENDFOR {}
     ;
 
-while : WHILE PAREN_LEFT expression PAREN_RIGHT commands END WHILE {}
+while : WHILE PAREN_LEFT expression PAREN_RIGHT commands ENDWHILE {}
       ;
 
-dowhile : DO commands WHILE PAREN_LEFT expression PAREN_RIGHT END DO WHILE{}
+dowhile : DO commands WHILE PAREN_LEFT expression PAREN_RIGHT ENDWHILE{}
         ;
 
 return : RETURN SEMICOLON  
