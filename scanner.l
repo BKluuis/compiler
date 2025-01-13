@@ -59,6 +59,7 @@ alphanumeric ({alphabetic} | {digit})
 "endswitch"                 {return ENDSWITCH;}
 "endfor"                    {return ENDFOR;}
 "endwhile"                  {return ENDWHILE;}
+"end"                       {return END;}
 "var"                       {return VAR;}
 "dowhile"                   {return DO;}
 "if"                        {return IF;}

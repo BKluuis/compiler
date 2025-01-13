@@ -4,9 +4,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../lib/stringUtil.h"
+#include "../lib/typeUtil.h"
 #include "../lib/record.h"
-#include "../lib/tree.h"
 
+char* outcode;
 int yylex(void);
 int yyerror(char *s);
 extern int yylineno;
@@ -23,13 +25,12 @@ char * cat(char *, char *, char *, char *, char *);
 %union {
 	char * text;  /* string value */
 	struct record * rec;
-        struct Node * node;
 };
 
 
 
 %token RETURN
-%token INT_LIT FLOAT_LIT STRING_LIT BOOL_LIT
+%token <text> INT_LIT FLOAT_LIT STRING_LIT BOOL_LIT
 %token FUNC CONST MAIN
 %token <text> TYPE ID 
 %token SWITCH CASE DEFAULT
@@ -50,33 +51,57 @@ char * cat(char *, char *, char *, char *, char *);
 /*Esse token nunca é retornada pelo lexer, mas é usada para dar maior precedência à regra : - expression*/
 %left UMINUS 
 
-/* %type <rec> variables_block variables declaration initialization assignment assignments subprogs subprog parameters parameter main commands command if elif_condition else_condition switch cases cases_opt for while dowhile variable_valued return expression literal call expressions  */
-
-%type <node> expression literal declared
+%type <rec> prog variables_block variables declaration initialization assignment assignments subprogs subprog parameters main commands command if elif_condition else_condition switch cases for while dowhile  return expression  call 
+%type <text> literal collection_access declared
 
 %start prog
 
 %%
-prog : BEGIN_TOK  variables_block subprogs main END {}
-     ;
+prog    : BEGIN_TOK variables_block subprogs main END {
+                fprintf(yyout, cat3($2->code, $3->code, $4->code));
+                freeRecord($2);
+                freeRecord($3);
+                freeRecord($4);
+        }
+        ;
 
-variables_block :                       {}
-                | VAR variables ENDVAR {}
+variables_block :                      {$$ = createRecord("");}
+                | VAR variables ENDVAR {
+                        $$ = createRecord($2->code);
+                        freeRecord($2);
+                }
                 ;
 
-variables :                                    {}
-          | declaration SEMICOLON variables {}
-          | initialization SEMICOLON variables {}
-          ;
+variables       :                                     {$$ = emptyRecord();}
+                | declaration SEMICOLON variables     {
+                        $$ =  createRecord(cat3($1->code, ";", $3->code));
+                        freeRecord($1);
+                        freeRecord($3);
+                }
+                | initialization SEMICOLON variables     {
+                        $$ =  createRecord(cat3($1->code, ";", $3->code));
+                        freeRecord($1);
+                        freeRecord($3);
+                }
+                ;
 
 /* Define a variável sem iniciar */
-declaration : TYPE array_op ID array_size_op        {}
-            | CONST TYPE array_op ID array_size_op  {}
-            ;
+declaration     : TYPE array_op ID array_size_op        { 
+                        char* type = typeFromToken($1);
+                        $$ = createRecord(cat2space(type, $3));
+                        free(type);
+                }
+                | CONST TYPE array_op ID array_size_op  {}
+                ;
 
 /* Define a variável e inicia */
-initialization : TYPE array_op ID ASSIGNMENT expression {}
-               ;
+initialization  : TYPE array_op ID ASSIGNMENT expression {
+                        char* type = typeFromToken($1);
+                        $$ = createRecord(cat4space(type, $3, "=", $5->code));
+                        freeRecord($5);
+                        free(type);
+                }
+                ;
 
 array_op :                                 {}
          | LESS_THAN TYPE MORE_THAN        {}
@@ -99,57 +124,82 @@ assignment : declared PLUS_ASSIGNMENT expression       {}
            ;
 
 /* Uma lista de subprogramas potencialmente vazia */
-subprogs :                  {}
-         | subprog subprogs {} 
+subprogs :                  {$$ = emptyRecord();}
+         | subprog subprogs {$$ = createRecord(cat2($1->code, $2->code));} 
          ;
 
-subprog : FUNC ID PAREN_LEFT parameters PAREN_RIGHT TYPE variables_block commands ENDFUNC {}
-        | FUNC ID PAREN_LEFT parameters PAREN_RIGHT variables_block commands ENDFUNC {}
+subprog : FUNC ID PAREN_LEFT parameters PAREN_RIGHT TYPE variables_block commands ENDFUNC {
+                char * code = cat5space(typeFromToken($6), $2, "(", $4->code, "){");
+                code = cat4space(code, $7->code, $8->code, "}");
+                $$ = createRecord(code);
+                free(code);
+        }
+        | FUNC ID PAREN_LEFT parameters PAREN_RIGHT variables_block commands ENDFUNC {
+                char * code = cat5space("void", $2, "(", $4->code, "){");
+                code = cat4space(code, $6->code, $7->code, "}");
+                $$ = createRecord(code);
+                free(code);
+        }
         ;
 
 /* Uma lista de declarações separadas por vírgula potencialmente vazia  */
-parameters :           {}
-           | declaration {}
-           | declaration COMMA parameters {}
+parameters :                                    {$$ = emptyRecord();}
+           | declaration                        {$$ = $1;}
+           | declaration COMMA parameters       {$$ = createRecord(cat3($1->code, ", ", $3->code));}
            ;
 
-main : MAIN commands ENDMAIN {}
+main : MAIN commands ENDMAIN {$$ = createRecord(cat3("int main() {", $2->code, "return 0;};"));}
      ;
 
-commands : command           {}
-         | command commands  {}
+commands : command           {$$ = createRecord($1->code);}
+         | command commands  {$$ = createRecord(cat2($1->code, $2->code));}
          ;
 
-command : assignments                   {}
-        | call SEMICOLON                {}
-        | if                            {}
-        | switch                        {}
-        | for                           {}
-        | while                         {}
-        | dowhile                       {}
-        | BREAK                         {} 
-        | CONTINUE                      {}
-        | return                        {}
+command : assignments                   {$$ = createRecord("assignments");}
+        | call SEMICOLON                {$$ = createRecord("call SEMICOLON");}
+        | if                            {$$ = $1;}
+        | switch                        {$$ = createRecord("switch");}
+        | for                           {$$ = createRecord("for");}
+        | while                         {$$ = createRecord("while");}
+        | dowhile                       {$$ = createRecord("dowhile");}
+        | BREAK SEMICOLON               {$$ = createRecord("BREAK SEMICOLON");}
+        | CONTINUE SEMICOLON            {$$ = createRecord("CONTINUE SEMICOLON");}
+        | return                        {$$ = createRecord("return");}
         ;          
 
 /* Checar o retorno */
-if : IF PAREN_LEFT expression PAREN_RIGHT commands elif_condition else_condition ENDIF {}
+if : IF PAREN_LEFT expression PAREN_RIGHT commands elif_condition else_condition ENDIF {
+                char* code = cat4("if (", $3->code, ") {", $5->code);
+                freeRecord($3);
+
+                // if (strcmp($6->code, "") != 0) {
+                //         code = cat2(code, $6->code);
+                //         freeRecord($6);
+                // }
+                // if (strcmp($7->code, "") != 0){
+                //         code = cat2(code, $6->code);
+                //         freeRecord($7);
+                // }
+                code = cat2(code, "}");
+                $$ = createRecord(code);
+                free(code);
+        }
    ;
 
 elif_condition :                                                                {}
                | ELIF PAREN_LEFT expression PAREN_RIGHT commands elif_condition {}
                ;
 
-else_condition :              {}
-               | ELSE commands    {}
+else_condition :                        {}
+               | ELSE commands          {}
                ;
 
 switch : SWITCH PAREN_LEFT ID PAREN_RIGHT cases ENDSWITCH {}
        ;
 
-cases : 
+cases :                                                         {}
       | CASE PAREN_LEFT literal PAREN_RIGHT commands cases      {}
-      | DEFAULT commands cases    {}
+      | DEFAULT commands cases                                  {}
       ;
 
 for : FOR PAREN_LEFT initialization SEMICOLON expression SEMICOLON expression PAREN_RIGHT commands ENDFOR {}
@@ -162,50 +212,50 @@ while : WHILE PAREN_LEFT expression PAREN_RIGHT commands ENDWHILE {}
 dowhile : DO commands WHILE PAREN_LEFT expression PAREN_RIGHT ENDWHILE{}
         ;
 
-return : RETURN SEMICOLON  
-       | RETURN expression SEMICOLON {}
+return : RETURN SEMICOLON               {}
+       | RETURN expression SEMICOLON    {}
        ;
 
 /* Uma expressão, um valor */           
-expression : declared                                {$$ = createNode("declared"); addChild($$, $1);}
-           | literal                                 {$$ = createNode("literal"); addChild($$, $1);}
-           | expression OR expression                {$$ = createNode("OR"); addChild($$, $1); addChild($$, $3);}
-           | expression AND expression               {$$ = createNode("AND"); addChild($$, $1); addChild($$, $3);}
-           | expression EQUALS expression            {$$ = createNode("EQUALS"); addChild($$, $1); addChild($$, $3);}
-           | expression NOT_EQUAL expression         {$$ = createNode("NOT_EQUAL"); addChild($$, $1); addChild($$, $3);}
-           | expression LESS_THAN expression         {$$ = createNode("LESS_THAN"); addChild($$, $1); addChild($$, $3);}
-           | expression MORE_THAN expression         {$$ = createNode("MORE_THAN"); addChild($$, $1); addChild($$, $3);}
-           | expression LESS_OR_EQUAL expression     {$$ = createNode("LESS_OR_EQUAL"); addChild($$, $1); addChild($$, $3);}
-           | expression MORE_OR_EQUAL expression     {$$ = createNode("MORE_OR_EQUAL"); addChild($$, $1); addChild($$, $3);}
-           | expression ADD expression               {$$ = createNode("ADD"); addChild($$, $1); addChild($$, $3);}
-           | expression MINUS expression             {$$ = createNode("MINUS"); addChild($$, $1); addChild($$, $3);}
-           | expression MULT expression              {$$ = createNode("MULT"); addChild($$, $1); addChild($$, $3);}
-           | expression DIV expression               {$$ = createNode("DIV"); addChild($$, $1); addChild($$, $3);}
-           | expression DIV_QUOTIENT expression      {$$ = createNode("DIV_QUOTIENT"); addChild($$, $1); addChild($$, $3);}
-           | expression DIV_REMAINDER expression     {$$ = createNode("DIV_REMAINDER"); addChild($$, $1); addChild($$, $3);}
-           | expression EXP expression               {$$ = createNode("EXP"); addChild($$, $1); addChild($$, $3);}
-           | NOT expression                          {$$ = createNode("NOT"); addChild($$, $2);}
-           | MINUS expression %prec UMINUS           {$$ = createNode("UNARY MINUS"); addChild($$, $2);}
-           | PAREN_LEFT expression PAREN_RIGHT       {$$ = createNode("PARENTHESIS"); addChild($$, $2);}
-           | call                                    {$$ = createNode("call");}
+expression : declared                                {$$ = createRecord($1);}
+           | literal                                 {$$ = createRecord($1);}
+           | expression OR expression                {}
+           | expression AND expression               {}
+           | expression EQUALS expression            {}
+           | expression NOT_EQUAL expression         {}
+           | expression LESS_THAN expression         {}
+           | expression MORE_THAN expression         {}
+           | expression LESS_OR_EQUAL expression     {}
+           | expression MORE_OR_EQUAL expression     {}
+           | expression ADD expression               {}
+           | expression MINUS expression             {}
+           | expression MULT expression              {}
+           | expression DIV expression               {}
+           | expression DIV_QUOTIENT expression      {}
+           | expression DIV_REMAINDER expression     {}
+           | expression EXP expression               {}
+           | NOT expression                          {}
+           | MINUS expression %prec UMINUS           {}
+           | PAREN_LEFT expression PAREN_RIGHT       {}
+           | call                                    {}
            ;
 
 /* Variáveis já declaradas */
-declared : ID              {$$ = createNode("ID"); addChild($$, createNode($1));}
+declared : ID                   {$$ = $1;}
            /* Checar: tipo de expressão para a coleção, dimensão da coleção */
-         | ID collection_access {$$ = createNode("ARRAY"); addChild($$, createNode($1));} 
+         | ID collection_access {$$ = $1;} 
          ; 
 
-literal : INT_LIT     {$$ = createNode("INT");}
-        | FLOAT_LIT   {$$ = createNode("FLOAT");}
-        | BOOL_LIT    {$$ = createNode("BOOL");}
-        | STRING_LIT  {$$ = createNode("STRING");}
+literal : INT_LIT     {$$ = $1;}
+        | FLOAT_LIT   {$$ = $1;}
+        | BOOL_LIT    {$$ = $1;}
+        | STRING_LIT  {$$ = $1;}
         ;
 
 /* Acessores de coleções */
 /* Associar: tipo da expressão de acesso */
-collection_access : SQUARE_LEFT expression SQUARE_RIGHT              {}
-                  | collection_access SQUARE_LEFT expression SQUARE_RIGHT {}
+collection_access : SQUARE_LEFT expression SQUARE_RIGHT                         {$$ = cat3("[", "<exp>", "]");}
+                  | collection_access SQUARE_LEFT expression SQUARE_RIGHT       {$$ = cat4($1,"[", "<exp>", "]");}
                   ;
 
 /* Chamada para uma função */
@@ -249,22 +299,4 @@ int main (int argc, char ** argv) {
 int yyerror (char *msg) {
 	fprintf (stderr, "%d: %s at '%s'\n", yylineno, msg, yytext);
 	return 0;
-}
-
-char * cat(char * s1, char * s2, char * s3, char * s4, char * s5){
-        int tam;
-        char * output;
-
-        tam = strlen(s1) + strlen(s2) + strlen(s3) + strlen(s4) + strlen(s5)+ 1;
-        output = (char *) malloc(sizeof(char) * tam);
-
-        if (!output){
-        printf("Allocation problem. Closing application...\n");
-        exit(0);
-        }
-
-        sprintf(output, "%s%s%s%s%s", s1, s2, s3, s4, s5);
-
-
-        return output;
 }

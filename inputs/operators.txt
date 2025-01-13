@@ -2,8 +2,8 @@ begin
     var
         Bool name;
         Int x = 10;
-    end var
+    endvar
     main
         name = 2 + (3 * 5) ^ 3 == x or not 120 >= x;    
-    end main
+    endmain
 end
