@@ -11,7 +11,7 @@ begin
     endvar
     
     \* Copiar os dados para os arrays auxiliares left e right *\
-    for (i = 0; i < leftSize; i++)
+    for (i = 0; i < leftSize; i += 1)
       left[i] = data[low + i];
     endfor
     
