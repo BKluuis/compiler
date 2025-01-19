@@ -11,24 +11,29 @@ begin
 
   func selectionSort (Array <Int> data, Int n)
     var 
-      Int i, j, minIndex;
+      Int i;
+      Int j;
+      Int minIndex;
     endvar
     
-    for (i = 0; i < n - 1; i++)
-      minIndex = i;  // Suponha que o menor valor está no índice i
-      for (j = i + 1; j < n; j++)
+    for (i = 0; i < n - 1; i += 1)
+      minIndex = i;  \* Suponha que o menor valor está no índice i *\
+      for (j = i + 1; j < n; j += 1)
         if (data[j] < data[minIndex])
-          minIndex = j;  // Encontrou um valor menor, atualiza minIndex
+          minIndex = j;  \* Encontrou um valor menor, atualiza minIndex *\
         endif
       endfor
       
-      if (minIndex != i)  // Só troca se minIndex foi alterado
+      if (minIndex != i)  \* Só troca se minIndex foi alterado *\
         swap(data, i, minIndex);
       endif
     endfor
   endfunc
 
   main
+    for(Int i = 0; i < 10; i += 1)
+      selectionSort(data, a);
+    endfor
     return;
   endmain
 end

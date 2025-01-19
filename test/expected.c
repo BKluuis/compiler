@@ -1,0 +1,1 @@
+void someProcedure(int *a, int *b) {}

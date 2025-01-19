@@ -1,7 +1,11 @@
 begin
     var
         Bool name;
-        Int x = 10;
+        Int x = 10;                 \* int* x *\
+        Array<Int> y[10];           \* int* y *\
+        Array<Array<Float>> z;      \* Float** z *\
+        Map<String, Float> map;     \*  *\
+        Stack<String> stack;        \*  *\
     endvar
     main
         name = 2 + (3 * 5) ^ 3 == x or not 120 >= x;    

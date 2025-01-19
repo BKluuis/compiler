@@ -1,52 +1,35 @@
 #ifndef TYPEUTIL_H
 #define TYPEUTIL_H
-#include <stddef.h>
 
-typedef struct Array {
-    void* data;
-    size_t size;
-    size_t capacity;
-} Array;
+#include "stateUtil.h"
 
-typedef struct Queue {
-    void* data;
-    size_t front;
-    size_t rear;
-    size_t size;
-    size_t capacity;
-} Queue;
+char *typeWithGeneric(char *, char *);
+char *typeWithGenericAndSize(char *, char *, char *);
 
-typedef struct Deque {
-    void* data;
-    size_t front;
-    size_t rear;
-    size_t size;
-    size_t capacity;
-} Deque;
+char *typeFromToken(char *, char *, char *);
 
-typedef struct Stack {
-    void* data;
-    size_t top;
-    size_t capacity;
-} Stack;
+/*
+ * Compares two different values of type specified by typeEntry
+ * type MUST have an compare[typename]() to work
+ */
+int compare(void *, void *, char *);
 
-typedef struct Map {
-    void* keys;
-    void* values;
-    size_t size;
-    size_t capacity;
-} Map;
+/*
+ * Makes a copy of type specified by char*
+ * type MUST have an copy[typename]() to work
+ */
+void *copy(void *, char *);
 
-typedef struct Set {
-    void* data;
-    size_t size;
-    size_t capacity;
-} Set;
+/*
+ * Makes a copy of type specified by char*
+ * type MUST have an print[typename]() to work
+ */
+void print(void *, char *);
 
-
-char* typeWithGeneric(char*, char*);
-char* typeWithGenericAndSize(char*, char*, char*);
-
-char* typeFromToken(char*, char*, char*);
+/*
+ * Makes a copy of type specified by char*
+ * type MUST have an delete[typename]() to work
+ */
+void delete(void *, char *);
 
 #endif

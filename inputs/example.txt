@@ -3,25 +3,26 @@ begin
 		if  (a) 
 			if (b) 
 				return true;
-			else
+			elif (!b)
 				return c;
-			end if   
-		end if 
-		return falso;
-	end func
+			else 
+				return a;
+			endif   
+		endif 
+		return false;
+	endfunc
 
 	main
 		switch(a)
 			case (1)
-
 			case (2)
 			default
-		end switch
+		endswitch
 
 		if  (f(true, false, true)) 
 			escreva("f é verdadeiro");
 		else
 			escreva("f é falso");
-		end if 
-	end main
+		endif 
+	endmain
 end

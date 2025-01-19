@@ -19,9 +19,14 @@ alphanumeric ({alphabetic} | {digit})
                               return FLOAT_LIT;}
 \".+\"                      {yylval.text = strdup(yytext);
                               return STRING_LIT;}
-"true"|"false"              {yylval.text = strdup(yytext);
-                              return BOOL_LIT;}
-"not"                       {return NOT;}
+"true"|"false"              { if(strcmp(yytext, "true") == 0){
+                                yylval.text = strdup("1");
+                              } else {
+                                yylval.text = strdup("0");
+                              }
+                              return BOOL_LIT;
+                            }
+"not"|"!"                       {return NOT;}
 "and"|"&&"                  {return AND;}                            
 "or"|"||"                   {return OR;}
 "func"                      {return FUNC;}
