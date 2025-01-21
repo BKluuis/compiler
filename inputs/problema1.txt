@@ -1,0 +1,10 @@
+begin
+    main
+        var
+            Float x = 10.3;
+            Float y = 4.5;
+            Int c = 3;
+        endvar
+        print(x ^ 2.0 - y + Float(c));
+    endmain
+end

@@ -19,13 +19,15 @@ Map *createInternalMap(char *keyType, size_t keySize, char *valueType,
                        size_t valueSize);
 Map *createMap(char *, char *, size_t);
 void deleteMap(Map *);
+void printMap(Map *);
+int equalsMap(Map *, Map *);
+Map *copyMap(Map *map);
+void *accessMap(Map *, void *);
 
 /**
  * Puts a copy of value into key (or a copy of key if key doesn't exists)
  */
 void mapPut(Map *, void *, void *);
 void *mapGet(Map *, void *);
-void printMap(Map *);
-int compareMap(Map *, Map *);
 
 #endif

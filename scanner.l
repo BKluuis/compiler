@@ -3,6 +3,7 @@
   #include "y.tab.h"
   
   extern int yyerror (char *msg);  
+  extern int yylineno;
 %}
 
 digit [0-9]
@@ -12,7 +13,7 @@ alphanumeric ({alphabetic} | {digit})
 
 %%
 
-[ \t\n]                     ;
+[ \t]                     ;
 {sign}{digit}+              {yylval.text = strdup(yytext);
                               return INT_LIT;}
 {sign}{digit}?+\.{digit}+    {yylval.text = strdup(yytext);
@@ -103,6 +104,7 @@ alphanumeric ({alphabetic} | {digit})
 [a-zA-Z][a-zA-Z0-9]*	      {yylval.text = strdup(yytext);
                               return ID;}
 \\\*.*\*\\                    {/* isso é um comentário */}
+"\n"                        {yylineno++;}
 .                           {yyerror("Invalid character");}
 
 %%

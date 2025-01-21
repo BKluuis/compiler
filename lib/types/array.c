@@ -54,6 +54,8 @@ Array *clearArray(Array *array) {
         free(array->data[i]);
       }
     }
+    array->capacity = 10;
+    array->size = 0;
   }
 }
 
@@ -92,16 +94,69 @@ void *arrayGet(Array *array, size_t index) {
     exit(1);
   }
 
-  return array->data[index];
+  return copy(array->data[index], array->type.name);
 }
 
 void printArray(Array *array) {
   printf("[");
-  for (size_t i = 0; i < array->size; i++) {
-    print(array->data[i], array->type.name);
-    if (i != array->size - 1) {
-      printf(", ");
+  if (array) {
+    for (size_t i = 0; i < array->size; i++) {
+      print(array->data[i], array->type.name);
+      if (i != array->size - 1) {
+        printf(", ");
+      }
     }
+  } else {
+    printf("null");
   }
   printf("]");
+}
+
+Array *arrayAppend(Array *array1, Array *array2) {
+  if (!equals(&array1->type, &array2->type, "typeEntry")) {
+    fprintf(stderr,
+            "Error appending array: array1 is of type %s while array2 is of "
+            "type %s\n",
+            array1->type.name, array2->type.name);
+    exit(1);
+  }
+
+  Array *newArray = copyArray(array1);
+
+  for (int i = 0; i < array2->size; i++) {
+    void *element = arrayGet(array2, i);
+    if (element) {
+      arrayAdd(newArray, element);
+    }
+  }
+
+  return newArray;
+}
+
+int equalsArray(Array *array1, Array *array2) {
+  if (!equals(&array1->type, &array2->type, "typeEntry")) {
+    return 0;
+  }
+  if (array1->size != array2->size) {
+    printf("Arrays are different because size is different\n");
+    return 0;
+  }
+  for (int i = 0; i < array1->size; i++) {
+    void *elem1 = arrayGet(array1, i);
+    void *elem2 = arrayGet(array2, i);
+    if (!equals(elem1, elem2, array1->type.name)) {
+      return 0;
+    }
+  }
+
+  return 1;
+}
+
+void *accessArray(Array *array, size_t index) {
+  if (index >= array->size) {
+    printf("Cannot get array item: index out of bounds\n");
+    exit(1);
+  }
+
+  return array->data[index];
 }

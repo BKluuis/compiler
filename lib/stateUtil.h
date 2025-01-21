@@ -3,6 +3,9 @@
 #include <stdlib.h>
 
 typedef struct Array Array;
+void printArray(Array *);
+void deleteArray(Array *);
+Array *copyArray(Array *);
 
 typedef struct typeEntry {
   char *name;
@@ -13,15 +16,18 @@ typeEntry *createTypeEntry(char *name, size_t size);
 void printTypeEntry(typeEntry *type);
 void deleteTypeEntry(typeEntry *entry);
 typeEntry *copyTypeEntry(typeEntry *);
+int equalsTypeEntry(typeEntry *, typeEntry *);
 
 typedef struct funcEntry {
   char *name;
   char *id; // Equivalente ao scope no varEntry
-  typeEntry returnType;
+  Array *returnType;
 } funcEntry;
 
-funcEntry *createFuncEntry(char *name, char *id, char *returnType);
+funcEntry *createFuncEntry(char *name, char *id, Array *returnType);
 void deleteFuncEntry(funcEntry *entry);
+funcEntry *copyFuncEntry(funcEntry *);
+void printFuncEntry(funcEntry *var);
 
 typedef struct varEntry {
   char *name;
@@ -30,8 +36,10 @@ typedef struct varEntry {
 } varEntry;
 
 varEntry *createVarEntry(char *name, Array *types, char *scope);
+varEntry *varEntryExists(char *name, char *scope);
 void deleteVarEntry(varEntry *entry);
 void printVarEntry(varEntry *var);
+varEntry *copyVarEntry(varEntry *);
 
 char *generateName(char *, char *);
 

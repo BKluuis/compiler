@@ -69,11 +69,11 @@ char *stringToCString(String *s) {
 
 int equalsString(String *a, String *b) {
   if (!a || !a->data) {
-    printf("Cannot compare Strings: first string isn't allocated\n");
+    printf("Cannot equals Strings: first string isn't allocated\n");
     exit(1);
   }
   if (!b || !b->data) {
-    printf("Cannot compare Strings: second string isn't allocated\n");
+    printf("Cannot equals Strings: second string isn't allocated\n");
     exit(1);
   }
   if (a->size != b->size) {

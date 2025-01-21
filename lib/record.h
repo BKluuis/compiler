@@ -1,19 +1,23 @@
 #ifndef RECORD
 #define RECORD
 
-struct record
-{
-	char* code; /* field for storing the output code */
-	char* opt1; /* field for another purpose */
-};
+typedef struct Array Array;
+void deleteArray(Array *array);
 
-typedef struct record record;
+typedef struct record {
+  char *code;
+  char *text;
+  Array *array;
+} record;
 
-void freeRecord(record*);
-/* aloca e retorna um registro e inicia code e opt1 com os parametros fornecidos*/
-record* createRecordOpt(char*, char*);
-record* createRecord(char*);
+void freeRecord(record *);
+
+/* Aloca e retorna um registro e inicia code e text com os parametros
+ * fornecidos
+ */
+record *createRecordOpt(char *, char *);
+record *createRecord(char *);
 /* retorna um registro com os campos preenchidos com "" e "" */
-record* emptyRecord();
+record *emptyRecord();
 
 #endif

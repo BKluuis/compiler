@@ -84,7 +84,7 @@ void *stackPeek(Stack *stack) {
 int isStackEmpty(Stack *stack) { return stack->size == 0; }
 
 void printStack(Stack *stack) {
-  printf("Stack (size: %zu, capacity: %zu): [", stack->size, stack->capacity);
+  printf("[", stack->size, stack->capacity);
   for (size_t i = 0; i < stack->size; i++) {
     print(stack->data[i], stack->type.name);
     if (i != stack->size - 1)

@@ -14,6 +14,8 @@
 #include "../lib/typeUtil.h"
 #include "../lib/record.h"
 
+struct record * exponentExpression(struct record *a, struct record *b);
+struct record * binaryExpression(struct record *a, char* operation, struct record *b);
 int yylex(void);
 int yyerror(char *s);
 static char* currentScope;
@@ -21,7 +23,7 @@ extern int yylineno;
 extern char * yytext;
 extern FILE * yyin, * yyout;
 extern int yydebug;
-Array* typesArray;
+extern int yy_flex_debug;
 %}
 
 %debug
@@ -29,6 +31,7 @@ Array* typesArray;
 %union {
 	char * text;  /* string value */
 	struct record * rec;
+        struct Array *array;
 };
 
 %token RETURN
@@ -53,18 +56,25 @@ Array* typesArray;
 /*Esse token nunca é retornada pelo lexer, mas é usada para dar maior precedência à regra : - expression*/
 %left UMINUS 
 
-%type <rec> prog variables_block variables declaration initialization assignment subprogs subprog parameters main commands command if elif_condition else_condition switch cases for while dowhile return expression call call_parameters statement statements stms_cmds generic_type_op
-%type <text> literal collection_access declared collection_size_op 
+%type <rec> prog variables_block variables declaration initialization initialization_expression initialization_list assignment subprogs subprog parameters call_parameters_op main commands command if elif_condition else_condition switch cases for while dowhile return expression call  statement statements stms_cmds  func_declaration
+literal declared casting
+%type <text>  collection_size_op 
+%type <array> type generic_type collection_access
 
 %start prog
 
 %%
 /*TODO: Adicionar os includes da linguagem no inicio*/
-prog    : BEGIN_TOK variables_block subprogs main END {
-                fprintf(yyout, cat3($2->code, $3->code, $4->code));
-                freeRecord($2);
+prog    : BEGIN_TOK {stackPush(scopeStack, "global");} variables_block subprogs main END {
+                char* code = "#include \"./lib/standard.h\"\n";
+                if(strcmp($3->code, "") != 0){
+                        code = cat2(code, $3->code);
+                }
+                fprintf(yyout, cat3(code, $4->code, $5->code));
                 freeRecord($3);
                 freeRecord($4);
+                freeRecord($5);
+                stackPop(scopeStack);
         }
         ;
 
@@ -76,12 +86,12 @@ variables_block :                      {$$ = createRecord("");}
                 ;
 
 variables       :                                     {$$ = emptyRecord();}
-                | declaration SEMICOLON variables     {
+                | initialization SEMICOLON variables     {
                         $$ =  createRecord(cat3($1->code, ";", $3->code));
                         freeRecord($1);
                         freeRecord($3);
                 }
-                | initialization SEMICOLON variables     {
+                | declaration SEMICOLON variables     {
                         $$ =  createRecord(cat3($1->code, ";", $3->code));
                         freeRecord($1);
                         freeRecord($3);
@@ -89,77 +99,65 @@ variables       :                                     {$$ = emptyRecord();}
                 ;
 
 /* Define a variável sem iniciar */
-/* Alguns tipos precisam de um generic especificado */
-/* Se não especificado um tamanho, iniciar com um padrão */
-declaration     : {deleteArray(typeArray);} type ID collection_size_op        { 
-                        
-                        varEntry* tempVar;
+/* Retorna o código de declaração é a coleção de tipos da variavel */
+declaration     : type ID collection_size_op        { 
+                        varEntry* temp;
                         char* code;
 
-                        if($2){
-                                if($2->opt1){
-                                        tempVar = createVarEntry($3, $1, $2->code, $2->opt1, "currentscope");
-                                        printf("%s - %s - %s - %s - %s\n", tempVar->name, tempVar->type, tempVar->subtype1, tempVar->subtype2, tempVar->scope);
-                                } else {
-                                        tempVar = createVarEntry($3, $1, $2->code, NULL, "currentscope");
-                                        printf("%s - %s - %s - %s\n", tempVar->name, tempVar->type, tempVar->subtype1, tempVar->scope);
-                                }
+                        temp = createVarEntry($2, $1, stackPeek(scopeStack));
+
+                        varEntry* var = (varEntry *)mapGet(varMap, temp->name); 
+                        if(var && equals(var->scope, temp->scope, "char*")){
+                                fprintf(stderr, "Error while parsing: Variable ");
+                                print(var, "varEntry");
+                                fprintf(stderr, " already defined\n");
+                                exit(1);
                         } else {
-                                tempVar = createVarEntry($3, $1, NULL, NULL, "currentscope");
-                                printf("%s - %s - %s\n", tempVar->name, tempVar->type, tempVar->scope);
+                                mapPut(varMap, temp->name, temp);
                         }
-                        varEntry* var = (varEntry *)mapGet(varMap, tempVar->name); 
-                        if(var && strcmp(var->scope, tempVar->scope) != 0){
-                                mapPut(varMap, tempVar->name, tempVar);
-                        }
+                        printf("Created var: "); print(temp, "varEntry"); printf("\n");
 
-                        code = typeFromToken($1, NULL, NULL);
-                        code = cat2space(code, $3);
+                        code = typeFromToken(arrayGet($1, 0));
+                        code = cat2space(code, $2);
+
                         $$ = createRecord(code);
+                        $$->array = copyArray($1);
 
+                        deleteArray($1);
+                        free($3);
                 }
                 ;
 
 /* Define a variável e inicia */
-initialization  :{deleteArray(typeArray);} type ID collection_size_op ASSIGNMENT expression { 
-                        varEntry* tempVar;
-                        char* code;
-
-                        if($2){
-                                if($2->opt1){
-                                        tempVar = createVarEntry($3, $1, $2->code, $2->opt1, "currentscope");
-                                        printf("%s - %s - %s - %s - %s\n", tempVar->name, tempVar->type, tempVar->subtype1, tempVar->subtype2, tempVar->scope);
-                                } else {
-                                        tempVar = createVarEntry($3, $1, $2->code, NULL, "currentscope");
-                                        printf("%s - %s - %s - %s\n", tempVar->name, tempVar->type, tempVar->subtype1, tempVar->scope);
-                                }
-                        } else {
-                                tempVar = createVarEntry($3, $1, NULL, NULL, "currentscope");
-                                printf("%s - %s - %s\n", tempVar->name, tempVar->type, tempVar->scope);
-                        }
-                        varEntry* var = (varEntry *)mapGet(varMap, tempVar->name); 
-                        if(var && strcmp(var->scope, tempVar->scope) != 0){
-                                mapPut(varMap, tempVar->name, tempVar);
-                        }
-
-                        code = typeFromToken($1, NULL, NULL);
-                        code = cat4space(code, $3, "=", $6->code);
-                        $$ = createRecord(code);
-
+// TODO: Se o escopo for global, permitir apenas inicialização de literais
+// TODO: Checar se a expressão de inicialização condiz com o tipo da declaração
+initialization  : declaration ASSIGNMENT initialization_expression {
+                        $$ = binaryExpression($1, "=", $3);
                 }
-                | CONST {deleteArray(typeArray);} type ID collection_size_op ASSIGNMENT expression  {
-                        /* criar registro na tabela de simbolos com as informações da variavel */
-                        $$ = createRecord(cat5space("const", $2, $4, "=", $7->code));
-                }
-                ;
 
-type    : TYPE                  {}
-        | TYPE generic_type_op  {}
+//TODO: Adicionar inicialização de array, mapa, stack, etc;
+initialization_expression       : CURLY_LEFT initialization_list CURLY_RIGHT    {$$ = $2;}
+                                | expression                                    {$$ = $1;}
+                                ;
+
+initialization_list     : expression                            {$$ = $1;}
+                        | initialization_list COMMA expression  {/*TODO: gerar um monte de add/push/put dependendo do tipo*/}
+                        ;
+
+type    : TYPE                  { 
+                struct Array* types = createArray("char*", 4);
+                arrayAdd(types, $1);
+                $$ = types;
+        }
+        | TYPE generic_type     { 
+                struct Array* types = createArray("char*", 2);
+                arrayAdd(types, $1);
+                $$ = arrayAppend(types, $2);
+        }
         ;
 
-generic_type_op :                                               {$$ = NULL;}
-                | LESS_THAN TYPE MORE_THAN                      {$$ = createRecord($2);}
-                | LESS_THAN TYPE COMMA TYPE MORE_THAN           {$$ = createRecordOpt($2, $4);}
+generic_type    : LESS_THAN type MORE_THAN                      {$$ = $2;}
+                | LESS_THAN type COMMA type MORE_THAN           {$$ = arrayAppend($2, $4);}
                 ;
 
 
@@ -167,11 +165,11 @@ collection_size_op      :                                          {$$ = NULL;}
                         | SQUARE_LEFT expression SQUARE_RIGHT      {$$ = $2->code;}
                         ;
 
-assignment : declared PLUS_ASSIGNMENT expression       {$$ = createRecord(cat3($1, "+=", $3->code));}
-           | declared MINUS_ASSIGNMENT expression      {$$ = createRecord(cat3($1, "-=", $3->code));}
-           | declared MULT_ASSIGNMENT expression       {$$ = createRecord(cat3($1, "*=", $3->code));}
-           | declared DIVIDE_ASSIGNMENT expression     {$$ = createRecord(cat3($1, "/=", $3->code));}
-           | declared ASSIGNMENT expression            {$$ = createRecord(cat3($1, "=", $3->code));}
+assignment : declared PLUS_ASSIGNMENT expression       {$$ = createRecord(cat3($1->code, "+=", $3->code));}
+           | declared MINUS_ASSIGNMENT expression      {$$ = createRecord(cat3($1->code, "-=", $3->code));}
+           | declared MULT_ASSIGNMENT expression       {$$ = createRecord(cat3($1->code, "*=", $3->code));}
+           | declared DIVIDE_ASSIGNMENT expression     {$$ = createRecord(cat3($1->code, "/=", $3->code));}
+           | declared ASSIGNMENT expression            {$$ = createRecord(cat3($1->code, "=", $3->code));}
            ;
 
 /* Será necessário mudar para que as funções recebam parâmetros por referência
@@ -182,29 +180,82 @@ subprogs :                  {$$ = emptyRecord();}
          | subprog subprogs {$$ = createRecord(cat2($1->code, $2->code));} 
          ;
 
-subprog : FUNC ID PAREN_LEFT parameters PAREN_RIGHT {deleteArray(typeArray);} type variables_block stms_cmds ENDFUNC {
-                char * code = cat5space($6, $2, "(", $4->code, "){");
-                code = cat4space(code, $8->code, $9->code, "}");
+/**
+* Retorna o código da função e possívelmente o tipo da função, se houver, ou nulo, se não houver
+* Ainda não checa o tipo a fundo, apenas o tipo inicial
+*/
+subprog : func_declaration type variables_block stms_cmds ENDFUNC {
+                char * code = cat5space(typeFromToken(arrayGet($2, 0)), $1->code, "{", $3->code, $4->code);
+                code = cat2space(code,"}");
+
                 $$ = createRecord(code);
+                $$->array = copyArray($2);
+
+                freeRecord($1);
+                freeRecord($3);
+                freeRecord($4);
+                deleteArray($2);
                 free(code);
+                stackPop(scopeStack);
         }
-        | FUNC ID PAREN_LEFT parameters PAREN_RIGHT variables_block stms_cmds ENDFUNC {
-                char * code = cat5space("void", $2, "(", $4->code, "){");
-                code = cat4space(code, $6->code, $7->code, "}");
+        | func_declaration variables_block stms_cmds ENDFUNC {
+                char * code = cat5space("void", $1->code, "{", $2->code, $3->code);
+                code = cat2space(code,"}");
+
                 $$ = createRecord(code);
+                freeRecord($1);
+                freeRecord($2);
+                freeRecord($3);
                 free(code);
+                stackPop(scopeStack);
         }
         ;
 
+func_declaration        : FUNC ID PAREN_LEFT {stackPush(scopeStack, $2);} parameters PAREN_RIGHT {
+                                char* id = stackPeek(scopeStack);
+
+                                funcEntry* entry = createFuncEntry($2, id, typesArray);
+                                funcEntry* var = (funcEntry *)mapGet(funcMap, entry->name); 
+
+                                if(var && equals(var->name, entry->name, "char*")){
+                                        printf("Error while parsing: function already defined ");
+                                        print(var, "funcEntry");
+                                        printf("\n");
+                                        exit(1);
+                                } else {
+                                        printf("New function defined: ");
+                                        print(entry, "funcEntry");
+                                        printf("\n");
+                                        mapPut(funcMap, entry->name, entry);
+                                }
+
+                                //text é os tipos dos parametros concatenados sem espaço
+                                $$ = createRecord(cat4space($2, "(", $5->code, ")"));
+                                $$->array = copyArray($5->array);
+                                printf(cat4space($2, "(", $5->code, ") "));
+                                print($$->array, "Array");
+                                printf("\n");
+                                freeRecord($5);
+                        }
+
 /* Uma lista de declarações separadas por vírgula potencialmente vazia  */
+/* Retorna como text todos os tipos juntos, servirá como identificação para overloading de função  */
+/* TODO: fazer com que o text junte os subtipos também s*/
 parameters :                                    {$$ = emptyRecord();}
            | declaration                        {$$ = $1;}
-           | declaration COMMA parameters       {$$ = createRecord(cat3($1->code, ", ", $3->code));}
+           | declaration COMMA parameters       {$$ = createRecord(cat3($1->code, ", ", $3->code)); $$->array = copyArray($1->array);}
            ;
 
-main : MAIN stms_cmds ENDMAIN {$$ = createRecord(cat3("int main() {", $2->code, "};"));}
+call_parameters_op      :                                      {$$ = emptyRecord();}
+                        | expression                           {$$ = $1;}
+                        | expression COMMA parameters          {$$ = createRecord(cat3($1->code, ", ", $3->code)); $$->array = copyArray($1->array);}
+                        ;
+
+
+main : MAIN variables_block stms_cmds ENDMAIN {$$ = createRecord(cat4("int main() {", $2->code, $3->code, "};"));}
      ;
 
+// Add option to return
 stms_cmds       :                               {$$ = emptyRecord();}
                 | commands stms_cmds            {$$ = createRecord(cat2space($1->code, $2->code));}
                 | statements stms_cmds          {$$ = createRecord(cat2space($1->code, $2->code));}
@@ -234,7 +285,7 @@ statement       : assignment    {$$ = $1;}
 
 
 /* Checar o retorno */
-if : IF PAREN_LEFT expression PAREN_RIGHT {} stms_cmds {} elif_condition else_condition ENDIF {
+if      : IF PAREN_LEFT expression PAREN_RIGHT stms_cmds elif_condition else_condition ENDIF {
                 char* id = generateName("outif", NULL);
                 char* code = cat5("if (!(", $3->code, ")) goto ", id, "; {");
                 code = cat5(code, $5->code, "}", id, ":");
@@ -276,7 +327,7 @@ switch  : SWITCH PAREN_LEFT ID PAREN_RIGHT cases ENDSWITCH {
 
 cases   :                                                                 {$$ = emptyRecord();}
         | CASE PAREN_LEFT literal PAREN_RIGHT stms_cmds cases             {
-                char* code = cat5space("case(",$3,"):",$5->code, "break;");
+                char* code = cat5space("case(",$3->code,"):",$5->code, "break;");
                 code = cat2(code, $6->code);
                 $$ = createRecord(code);
                 /*dar free*/
@@ -358,57 +409,122 @@ return : RETURN               {$$ = createRecord("return");}
        | RETURN expression    {$$ = createRecord(cat2space("return", $2->code));}
        ;
 
-/* Uma expressão, um valor */           
-expression : declared                                {$$ = createRecord($1);}
-           | literal                                 {$$ = createRecord($1);}
-           | expression OR expression                {$$ = createRecord(cat3space($1->code, "||", $3->code));}
-           | expression AND expression               {$$ = createRecord(cat3space($1->code, "&&", $3->code));}
-           | expression EQUALS expression            {$$ = createRecord(cat3space($1->code, "==", $3->code));}
-           | expression NOT_EQUAL expression         {$$ = createRecord(cat3space($1->code, "!=", $3->code));}
-           | expression LESS_THAN expression         {$$ = createRecord(cat3space($1->code, "<", $3->code));}
-           | expression MORE_THAN expression         {$$ = createRecord(cat3space($1->code, ">", $3->code));}
-           | expression LESS_OR_EQUAL expression     {$$ = createRecord(cat3space($1->code, "<=", $3->code));}
-           | expression MORE_OR_EQUAL expression     {$$ = createRecord(cat3space($1->code, ">=", $3->code));}
-           | expression ADD expression               {$$ = createRecord(cat3space($1->code, "+", $3->code));}
-           | expression MINUS expression             {$$ = createRecord(cat3space($1->code, "-", $3->code));}
-           | expression MULT expression              {$$ = createRecord(cat3space($1->code, "*", $3->code));}
-           | expression DIV expression               {$$ = createRecord(cat3space($1->code, "/", $3->code));}
-           | expression DIV_QUOTIENT expression      {$$ = createRecord(cat3space($1->code, "quotient", $3->code));}
-           | expression DIV_REMAINDER expression     {$$ = createRecord(cat3space($1->code, "remainder", $3->code));}
-           | expression EXP expression               {$$ = createRecord(cat5("exponentf(", $1->code , "," , $3->code, ")"));}
-           | NOT expression                          {$$ = createRecord(cat2("!", $2->code));}
-           | MINUS expression %prec UMINUS           {$$ = createRecord(cat2("-", $2->code));}
-           | PAREN_LEFT expression PAREN_RIGHT       {$$ = createRecord(cat3("(", $2->code, ")"));}
-           | call                                    {$$ = $1;}
-           ;
+/* Uma expressão, um valor
+* Retorna como text o nome do tipo da expressão em char* 
+*/           
+expression      : declared                              {$$ = $1; /*$$->code = cat2("*", $$->code);*/}
+                | literal                               {
+                        $$ = $1; 
+                        $$->array = createArray("char*", 1);
+                        arrayAdd($$->array, $$->text);
+                        $$->code = cat5("create",$1->text, "(", $1->code, ")");
+                }
+                | casting                               {$$ = $1;}
+                | expression OR expression              {$$ = binaryExpression($1, "||", $3);}
+                | expression AND expression             {$$ = binaryExpression($1, "&&", $3);}
+                | expression EQUALS expression          {$$ = binaryExpression($1, "==", $3);}
+                | expression NOT_EQUAL expression       {$$ = binaryExpression($1, "!=", $3);}
+                | expression LESS_THAN expression       {$$ = binaryExpression($1, "<", $3);}
+                | expression MORE_THAN expression       {$$ = binaryExpression($1, ">", $3);}
+                | expression LESS_OR_EQUAL expression   {$$ = binaryExpression($1, "<=", $3);}
+                | expression MORE_OR_EQUAL expression   {$$ = binaryExpression($1, ">=", $3);}
+                | expression ADD expression             {$$ = binaryExpression($1, "+", $3);}
+                | expression MINUS expression           {$$ = binaryExpression($1, "-", $3);}
+                | expression MULT expression            {$$ = binaryExpression($1, "*", $3);}
+                | expression DIV expression             {$$ = binaryExpression($1, "/", $3);}
+                | expression DIV_QUOTIENT expression    {$$ = binaryExpression($1, "quotient", $3);}
+                | expression DIV_REMAINDER expression   {$$ = binaryExpression($1, "remainder", $3);}
+                | expression EXP expression             {$$ = exponentExpression($1, $3);}
+                | NOT expression                        {$$ = createRecord(cat2("!", $2->code)); $$->array = copy($2->array, "Array");}
+                | MINUS expression %prec UMINUS         {$$ = createRecord(cat2("-", $2->code)); $$->array = copy($2->array, "Array");}
+                | PAREN_LEFT expression PAREN_RIGHT     {$$ = createRecord(cat3("(", $2->code, ")")); $$->array = copy($2->array, "Array");}
+                | call                                  {$$ = $1;}
+                ;
+
+casting : TYPE PAREN_LEFT expression PAREN_RIGHT {
+                struct Array* type = createArray("char*", 1);
+                arrayAdd(type, $1);
+                $$ = createRecord(cast($3->code, $1, arrayGet($3->array, 0)));
+                $$->array = copy(type, "Array");
+        } 
 
 /* Variáveis já declaradas */
-declared : ID                   {$$ = cat2("*", $1);}
-           /* Checar: tipo de expressão para a coleção, dimensão da coleção */
-         | ID collection_access {$$ = cat3("*", $1, $2);} 
-         ; 
+//TODO: Checar escopo
+declared        : ID                   {
+                       varEntry* var = (varEntry *)mapGet(varMap, $1); 
+                        if(!var) {
+                                yyerror(cat2space("Variable doesn't exists: ", $1));
+                                return 1;
+                        }
+                        $$ = createRecord($1);
+                        $$->array = copy(var->types, "Array");
+                }
+                /* Checar: tipo de expressão para a coleção, dimensão da coleção */
+                | ID collection_access {
+                        varEntry* var = (varEntry *)mapGet(varMap, $1); 
+                        if(!var) {
+                                yyerror(cat2space("Variable doesn't exists: ", $1));
+                                return 1;
+                        }
 
-literal : INT_LIT     {$$ = $1;}
-        | FLOAT_LIT   {$$ = $1;}
-        | BOOL_LIT    {$$ = $1;}
-        | STRING_LIT  {$$ = $1;}
+                        printf("Var: "); print(var, "varEntry"); printf("\n");
+                        printf("Accessors: "); print($2, "Array");
+                        $$ = access(var->name, var->types, $2, 0, 0);
+                        printf("Final variable accessor: code: %s, type: ", $$->code);
+                        printArray($$->array);
+                        printf("\n");
+                } 
+                ; 
+
+literal : INT_LIT     {$$ = createRecordOpt($1, "Int");}
+        | FLOAT_LIT   {$$ = createRecordOpt(cat2($1,"f"), "Float");}
+        | BOOL_LIT    {$$ = createRecordOpt($1, "Bool");}
+        | STRING_LIT  {$$ = createRecordOpt($1, "String");}
         ;
 
 /* Acessores de coleções */
-/* Associar: tipo da expressão de acesso */
-collection_access : SQUARE_LEFT expression SQUARE_RIGHT                         {$$ = cat3("[", $2->code, "]");}
-                  | collection_access SQUARE_LEFT expression SQUARE_RIGHT       {$$ = cat4($1,"[", $3->code, "]");}
-                  ;
+/* TODO: Atualmente está comparando apenas o tipo superficial da expressão */
+collection_access       : SQUARE_LEFT expression SQUARE_RIGHT                         {
+                                struct Array* exps = createArray("Map",3);
+                                struct Map* vars = createMap("char*", "char*", 3);
 
-/* Seguindo a mudança dos subprogs, o call_parameters deve ter & adicionado aos parâmetros
+                                mapPut(vars, $2->code, arrayGet($2->array, 0));
+                                arrayAdd(exps, vars);
+
+                                // print(exps, "Array");
+                                $$ = exps;
+                        }
+                        | collection_access SQUARE_LEFT expression SQUARE_RIGHT       {
+                                $$ = $1;         
+                                struct Map* vars = createMap("char*", "char*", 3);
+
+                                mapPut(vars, $3->code, arrayGet($3->array, 0));
+                                arrayAdd($$, vars);
+                                // print($$, "Array");
+                        }
+                        ;
+
+/* 
+* Comparar func aos args
 */
-call : ID PAREN_LEFT call_parameters PAREN_RIGHT {$$ = createRecord(cat4space($1, "(", $3->code, ")"));}    
-     ;  
+call    : ID PAREN_LEFT call_parameters_op PAREN_RIGHT {
+                funcEntry* func = (funcEntry *)mapGet(funcMap, $1); 
+                if(!func) {
+                        yyerror(cat2space("Function doesn't exists: ", $1));
+                        exit(1);
+                }
 
-call_parameters :                                       {$$ = emptyRecord();}
-                | expression                            {$$ = $1;}
-                | call_parameters COMMA expression      {$$ = createRecord(cat3($1->code, ",", $3->code));}
-                ;
+                if(strcmp($1, "print") == 0){
+                        $3->code = cat4($3->code, ",\"", arrayGet($3->array, 0), "\"");
+                }
+
+                printf("\n");
+                print(func, "funcEntry");
+                printf("\n");
+                $$ = createRecord(cat4space($1, "(", $3->code, ")"));
+                $$->array = copy(func->returnType, "Array");
+        }    
+        ;  
 
 %%
 
@@ -419,6 +535,7 @@ int yywrap(void){
 
 int main (int argc, char ** argv) {
         int codigo;
+        int yylineno = 0;
 
         if (argc < 3) {
         printf("Usage: $./compiler input.txt output.txt [-d]\nClosing application...\n");
@@ -426,10 +543,13 @@ int main (int argc, char ** argv) {
         }
         if(argc == 4 && strcmp(argv[3], "-d") == 0){
                 yydebug = 1; 
+                yy_flex_debug = 1;
+        } else {
+                yydebug = 0; 
+                yy_flex_debug = 0;
         }
 
         initGlobals();
-        initStandardTypes();
         
         yyin = fopen(argv[1], "r");
         yyout = fopen(argv[2], "w");
@@ -439,9 +559,70 @@ int main (int argc, char ** argv) {
         fclose(yyin);
         fclose(yyout);
 
+        printGlobals();
+
         cleanupGlobals();
         return codigo;
 
+}
+
+int isSameType(struct record *a, struct record *b){
+        return equals(a->array, b->array, "Array");
+}
+
+struct record * binaryExpression(struct record *a, char* operation, struct record *b){
+        if(!equals(a->array, b->array, "Array")){
+                yyerror("Error comparing expressions");
+                printf("Incompatible expression type: \"%s\" is of type ", a->code); 
+                print(a->array, "Array");
+                printf(" and \"%s\" is of type ", b->code); 
+                print(b->array, "Array");
+                printf("\n"); 
+                exit(1);
+        }
+        char* code;
+
+printf("1");
+        if(strcmp(operation, "+") == 0){
+printf("2");
+                if(strcmp(arrayGet(a->array, 0), "Float") == 0){
+printf("3");
+                        code = cat4space("addFloat(", a->code, b->code,")");
+                } else {
+printf("4");
+                        code = cat4space("addInt(", a->code, b->code,")");
+                }
+        } else {
+printf("5");
+                code = cat3space(a->code, operation, b->code);
+        }
+
+        struct record* rec = createRecord(code);
+        rec->array = copy(a->array, "Array");
+        return rec;
+}
+
+struct record * exponentExpression(struct record *a, struct record *b){
+        if(!equals(a->array, b->array, "Array")){
+                yyerror("Error comparing expressions");
+                printf("Incompatible expression type: \"%s\" is of type ", a->code); 
+                print(a->array, "Array");
+                printf(" and \"%s\" is of type ", b->code); 
+                print(b->array, "Array");
+                printf("\n"); 
+                exit(1);
+        }
+
+        char* code;
+        if(strcmp(arrayGet(a->array, 0), "Float") == 0){
+         code = cat5space("exponentf(",a->code, ",", b->code, ")");
+        } else {
+         code = cat5space("exponenti(",a->code, ",", b->code, ")");
+        }
+
+        struct record* rec = createRecord(code);
+        rec->array = copy(a->array, "Array");
+        return rec;
 }
 
 int yyerror (char *msg) {

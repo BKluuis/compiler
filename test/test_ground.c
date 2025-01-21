@@ -32,15 +32,28 @@ void *createArray2(char *type, int size) {
 int main() {
   initGlobals();
 
-  printMap(typeMap);
-  printf("\n");
+  Array *myArray = createArray("Array", 10);
+  Array *myInnerArray = createArray("Int", 3);
 
-  Array *types = createArray("char*", 3);
-  arrayAdd(types, "Array*");
-  arrayAdd(types, "Array*");
-  arrayAdd(types, "int*");
+  int *t1 = createInt(1);
+  arrayAdd(myInnerArray, t1);
+  delete (t1, "Int");
 
-  // createVarEntry("myArray", types, );
+  int *t2 = createInt(2);
+  arrayAdd(myInnerArray, t2);
+  delete (t2, "Int");
+
+  int *t3 = createInt(3);
+  arrayAdd(myInnerArray, t3);
+  delete (t3, "Int");
+
+  arrayAdd(myArray, myInnerArray);
+  arrayAdd(myArray, myInnerArray);
+  arrayAdd(myArray, myInnerArray);
+
+  delete (myInnerArray, "Array");
+
+  print(myArray, "Array");
 
   cleanupGlobals();
   return 0;

@@ -115,7 +115,7 @@ void mapPut(Map *map, void *key, void *value) {
   /*Chave já existe*/
   for (size_t i = 0; i < map->size; i++) {
     void *existingKey = map->keys[i];
-    if (compare(existingKey, key, map->keyType.name)) {
+    if (equals(existingKey, key, map->keyType.name)) {
       map->values[i] = copy(value, map->valueType.name);
       return;
     }
@@ -143,8 +143,8 @@ void *mapGet(Map *map, void *key) {
 
   for (size_t i = 0; i < map->size; i++) {
     void *existingKey = map->keys[i];
-    if (compare(existingKey, key, map->keyType.name)) {
-      return map->values[i];
+    if (equals(existingKey, key, map->keyType.name)) {
+      return copy(map->values[i], map->valueType.name);
     }
   }
 
@@ -168,7 +168,7 @@ void printMap(Map *map) {
   printf("}");
 }
 
-int compareMap(Map *a, Map *b) {
+int equalsMap(Map *a, Map *b) {
   int isSameType = 1;
   int isEqual = 1;
 
@@ -177,12 +177,47 @@ int compareMap(Map *a, Map *b) {
 
   if (a->size == b->size && isSameType) {
     for (int i = 0; i < a->size; i++) {
-      isEqual = isEqual && compare(mapGet(a, a->keys[i]), mapGet(b, b->keys[i]),
-                                   a->keyType.name);
-      isEqual = isEqual && compare(mapGet(a, a->values[i]),
-                                   mapGet(b, b->values[i]), a->valueType.name);
+      isEqual = isEqual && equals(mapGet(a, a->keys[i]), mapGet(b, b->keys[i]),
+                                  a->keyType.name);
+      isEqual = isEqual && equals(mapGet(a, a->values[i]),
+                                  mapGet(b, b->values[i]), a->valueType.name);
     }
   }
 
   return isEqual;
+}
+
+Map *copyMap(Map *map) {
+  if (map == NULL) {
+    printf("Cannot copy map: map is null\n");
+    return NULL;
+  }
+
+  Map *newMap =
+      createMap(map->keyType.name, map->valueType.name, map->capacity);
+
+  for (size_t i = 0; i < map->size; i++) {
+    void *copiedKey = copy(map->keys[i], map->keyType.name);
+    void *copiedValue = copy(map->values[i], map->valueType.name);
+    mapPut(newMap, copiedKey, copiedValue);
+  }
+
+  return newMap;
+}
+
+void *accessMap(Map *map, void *key) {
+  if (map == NULL || key == NULL) {
+    printf("Cannot get from map: map is null or key is null\n");
+    exit(1);
+  }
+
+  for (size_t i = 0; i < map->size; i++) {
+    void *existingKey = map->keys[i];
+    if (equals(existingKey, key, map->keyType.name)) {
+      return map->values[i];
+    }
+  }
+
+  printf("Cannot access map: key not found\n");
+  exit(1);
 }

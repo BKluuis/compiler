@@ -2,12 +2,19 @@ begin
     var
         Bool name;
         Int x = 10;                 \* int* x *\
-        Array<Int> y[10];           \* int* y *\
-        Array<Array<Float>> z;      \* Float** z *\
+        Array<Int> y;           \* int* y *\
+        Array<Array<Int>> z;      \* Float** z *\
         Map<String, Float> map;     \*  *\
         Stack<String> stack;        \*  *\
+        Array<Map<String, Int>, Map<Bool, Bool>> aaaaa;
+        Array<Map<Map<String, String>, Int>, Map<Bool, Bool>> bbbb;
+        Map<String, Array<Array<Int>>> mapaMatriz;
     endvar
     main
         name = 2 + (3 * 5) ^ 3 == x or not 120 >= x;    
+        y[10] = z[10][5];
+        y[2] = mapaMatriz["teste"];
+        y[2] = mapaMatriz["teste"][10];
+        y[2] = mapaMatriz["teste"][5][3];
     endmain
 end

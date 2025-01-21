@@ -1,0 +1,8 @@
+begin
+    var
+        Bool name;
+        Int x = 10; 
+    endvar
+    main   
+    endmain
+end

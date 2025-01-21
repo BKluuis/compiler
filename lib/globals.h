@@ -1,6 +1,7 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
+#include "./types/array.h"
 #include "./types/map.h"
 #include "./types/stack.h"
 
@@ -20,8 +21,10 @@ extern Map *funcMap;
 extern Map *varMap;
 
 extern Stack *scopeStack;
+extern Array *typesArray;
 
 void initGlobals();
 void cleanupGlobals();
+void printGlobals();
 
 #endif

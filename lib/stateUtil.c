@@ -26,27 +26,15 @@ char *generateName(char *prefix, char *suffix) {
 }
 
 /*TODO: pegar as entries de tipo existentes*/
-funcEntry *createFuncEntry(char *name, char *id, char *returnType) {
+funcEntry *createFuncEntry(char *name, char *id, Array *returnType) {
   funcEntry *entry = (funcEntry *)malloc(sizeof(funcEntry));
   if (entry == NULL) {
     return NULL;
   }
 
-  if (name) {
-    entry->name = strdup(name);
-  } else {
-    entry->name = NULL;
-  }
-  if (id) {
-    entry->id = strdup(id);
-  } else {
-    entry->id = NULL;
-  }
-  // if (returnType) {
-  //   entry->returnType = strdup(returnType);
-  // } else {
-  //   entry->returnType = NULL;
-  // }
+  entry->name = strdup(name);
+  entry->id = strdup(id);
+  entry->returnType = copyArray(returnType);
 
   return entry;
 }
@@ -88,7 +76,7 @@ void deleteFuncEntry(funcEntry *entry) {
   if (entry) {
     free(entry->name);
     free(entry->id);
-    free(entry->returnType.name);
+    deleteArray(entry->returnType);
     free(entry);
   }
 }
@@ -119,6 +107,29 @@ typeEntry *copyTypeEntry(typeEntry *other) {
   return out;
 }
 
+varEntry *copyVarEntry(varEntry *other) {
+  varEntry *out = malloc(sizeof(varEntry));
+  if (!out) {
+    fprintf(stderr, "Cannot copy varEntry: unnable to allocate memory\n");
+    exit(1);
+  }
+  out->name = strdup(other->name);
+  out->types = copyArray(other->types);
+  out->scope = strdup(other->scope);
+  return out;
+}
+
+funcEntry *copyFuncEntry(funcEntry *other) {
+  funcEntry *out = malloc(sizeof(funcEntry));
+  if (!out) {
+    fprintf(stderr, "Cannot copy funcEntry: unnable to allocate memory\n");
+    exit(1);
+  }
+  out->name = strdup(other->name);
+  out->id = strdup(other->id);
+  out->returnType = copyArray(other->returnType);
+  return out;
+}
 void printVarEntry(varEntry *var) {
   printf("{%s, %s, ", var->name, var->scope);
   printArray(var->types);
@@ -126,4 +137,17 @@ void printVarEntry(varEntry *var) {
 }
 void printTypeEntry(typeEntry *type) {
   printf("{%s, %d}", type->name, type->size);
+}
+
+void printFuncEntry(funcEntry *var) {
+  printf("{%s, %s, ", var->name, var->id);
+  printArray(var->returnType);
+  printf("}");
+}
+
+int equalsTypeEntry(typeEntry *a, typeEntry *b) {
+  int isEqual = 1;
+  isEqual &= strcmp(a->name, b->name) == 0;
+  isEqual &= a->size == b->size;
+  return isEqual;
 }

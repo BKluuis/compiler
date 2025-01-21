@@ -1,35 +1,42 @@
 #ifndef TYPEUTIL_H
 #define TYPEUTIL_H
 
+#include "record.h"
 #include "stateUtil.h"
 
-char *typeWithGeneric(char *, char *);
-char *typeWithGenericAndSize(char *, char *, char *);
-
-char *typeFromToken(char *, char *, char *);
+char *typeFromToken(char *token);
+char *createFromType(char *type, char *args);
+/**
+ * Constructs the sequence of function calls to get a value
+ * Currently only Array and Map
+ */
+record *access(char *varName, Array *types, Array *accessors, int typeIndex,
+               int accessIndex);
 
 /*
- * Compares two different values of type specified by typeEntry
- * type MUST have an compare[typename]() to work
+ * equalss two different values of type specified by typeEntry
+ * type MUST have an equals[typename]() to work
  */
-int compare(void *, void *, char *);
+int equals(void *a, void *b, char *type);
 
 /*
  * Makes a copy of type specified by char*
  * type MUST have an copy[typename]() to work
  */
-void *copy(void *, char *);
+void *copy(void *source, char *type);
 
 /*
  * Makes a copy of type specified by char*
  * type MUST have an print[typename]() to work
  */
-void print(void *, char *);
+void print(void *data, char *type);
 
 /*
  * Makes a copy of type specified by char*
  * type MUST have an delete[typename]() to work
  */
-void delete(void *, char *);
+void delete(void *data, char *type);
+
+char *cast(char *data, char *newTyp, char *oldType);
 
 #endif

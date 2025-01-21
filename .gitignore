@@ -8,4 +8,6 @@ output.txt
 .vscode/settings.json
 .vscode/launch.json
 .vscode/c_cpp_properties.json
+a.exe
+output.c
 .vscode/settings.json

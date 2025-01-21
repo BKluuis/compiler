@@ -8,6 +8,7 @@ Map *typeMap = NULL;
 Map *varMap = NULL;
 Map *funcMap = NULL;
 Stack *scopeStack = NULL;
+Array *typesArray = NULL;
 
 void initStandardTypes() {
   if (typeMap != NULL) {
@@ -31,6 +32,15 @@ void initStandardTypes() {
   }
 }
 
+void initStandardFunctions() {
+  if (funcMap != NULL) {
+    Array *i = createArray("char*", 1);
+    funcEntry *print = createFuncEntry("print", "global", i);
+
+    mapPut(funcMap, print->name, print);
+  }
+}
+
 void initGlobals() {
   if (typeMap == NULL) {
     typeMap = createInternalMap("char*", sizeof(char *), "typeEntry",
@@ -46,11 +56,16 @@ void initGlobals() {
   if (funcMap == NULL) {
     funcMap = createInternalMap("char*", sizeof(char *), "funcEntry",
                                 sizeof(funcEntry *));
+    initStandardFunctions();
     printf("Functions map created\n");
   }
   if (scopeStack == NULL) {
     scopeStack = createStack("char*", 5);
     printf("Scope stack created\n");
+  }
+  if (typesArray == NULL) {
+    typesArray = createArray("char*", 5);
+    printf("Types array created\n");
   }
 }
 
@@ -74,5 +89,38 @@ void cleanupGlobals() {
     deleteStack(scopeStack);
     scopeStack = NULL;
     printf("Scope stack deleted\n");
+  }
+  if (typesArray != NULL) {
+    deleteArray(typesArray);
+    typesArray = NULL;
+    printf("Types array deleted\n");
+  }
+}
+
+void printGlobals() {
+  if (typeMap == NULL) {
+    printf("TypeMap: ");
+    print(typeMap, "Map");
+    printf("\n");
+  }
+  if (varMap == NULL) {
+    printf("varMap: ");
+    print(varMap, "Map");
+    printf("\n");
+  }
+  if (funcMap == NULL) {
+    printf("funcMap: ");
+    print(funcMap, "Map");
+    printf("\n");
+  }
+  if (scopeStack == NULL) {
+    printf("scopeStack: ");
+    print(scopeStack, "Scope");
+    printf("\n");
+  }
+  if (typesArray == NULL) {
+    printf("typesArray: ");
+    print(typesArray, "Array");
+    printf("\n");
   }
 }
