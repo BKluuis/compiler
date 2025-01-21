@@ -47,8 +47,19 @@ int *createBool(int b) {
 float *addFloat(float *a, float *b) { return createFloat(*a + *b); }
 int *addInt(int *a, int *b) { return createInt(*a + *b); }
 
-float *exponentf(float a, float b) { return createFloat(powf(a, b)); }
-int *exponenti(int a, int b) { return createInt((int)powf((int)a, (int)b)); }
+float *subtractFloat(float *a, float *b) { return createFloat(*a - *b); }
+int *subtractInt(int *a, int *b) { return createInt(*a - *b); }
 
-float *castitof(int i) { return createFloat((float)(i)); }
-int *castftoi(float f) { return createInt((int)(f)); }
+float *divideFloat(float *a, float *b) { return createFloat(*a / *b); }
+int *divideInt(int *a, int *b) { return createInt(*a / *b); }
+
+float *exponentFloat(float *a, float *b) { return createFloat(powf(*a, *b)); }
+int *exponentInt(int *a, int *b) {
+  return createInt((int)powf((int)*a, (int)*b));
+}
+
+void assignFloat(float *a, float *b) { *a = *b; }
+void assignInt(int *a, int *b) { *a = *b; }
+
+float *castitof(int *i) { return createFloat((float)(*i)); }
+int *castftoi(float *f) { return createInt((int)(*f)); }

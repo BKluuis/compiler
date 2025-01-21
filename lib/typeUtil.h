@@ -4,8 +4,16 @@
 #include "record.h"
 #include "stateUtil.h"
 
+/**
+ * Returns the C type equivalent of the given token
+ */
 char *typeFromToken(char *token);
+
+/**
+ * Returns the C creation code of the given type
+ */
 char *createFromType(char *type, char *args);
+
 /**
  * Constructs the sequence of function calls to get a value
  * Currently only Array and Map
@@ -37,6 +45,9 @@ void print(void *data, char *type);
  */
 void delete(void *data, char *type);
 
-char *cast(char *data, char *newTyp, char *oldType);
+/**
+ * Returns the C cast code for the given expression
+ */
+char *cast(char *expression, char *newTyp, char *oldType);
 
 #endif

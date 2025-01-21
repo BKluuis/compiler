@@ -9,13 +9,14 @@
 #include "../lib/types/array.h"
 #include "../lib/types/primitives.h"
 #include "../lib/globals.h"
+#include "../lib/operations.h"
 #include "../lib/stringUtil.h"
 #include "../lib/stateUtil.h"
 #include "../lib/typeUtil.h"
 #include "../lib/record.h"
 
 struct record * exponentExpression(struct record *a, struct record *b);
-struct record * binaryExpression(struct record *a, char* operation, struct record *b);
+struct record * binaryOperation(struct record *a, char* operation, struct record *b);
 int yylex(void);
 int yyerror(char *s);
 static char* currentScope;
@@ -129,10 +130,19 @@ declaration     : type ID collection_size_op        {
                 ;
 
 /* Define a variável e inicia */
-// TODO: Se o escopo for global, permitir apenas inicialização de literais
+// TODO (baixa necessidade): Além de literais, no escopo global checar se a inicialização é uma expressão com apenas variaveis
+//      já declaradas e/ou literais. Ex: Int a = 10; Int b = a * 20; deveria ser válido
 // TODO: Checar se a expressão de inicialização condiz com o tipo da declaração
 initialization  : declaration ASSIGNMENT initialization_expression {
-                        $$ = binaryExpression($1, "=", $3);
+                        if($3->text) printf("|%s|\n", $3->text);
+                        if(equals(stackPeek(scopeStack), "global", "char*")){
+                                if($3->text == NULL || equals($3->text, "LITERAL", "char*")){
+                                        yyerror("Error while parsing");
+                                        fprintf(stderr, "Variables need to be initializde with literal types on global scope\n");
+                                        exit(1);
+                                } 
+                        }
+                        $$ = binaryOperation($1, "=", $3);
                 }
 
 //TODO: Adicionar inicialização de array, mapa, stack, etc;
@@ -165,11 +175,11 @@ collection_size_op      :                                          {$$ = NULL;}
                         | SQUARE_LEFT expression SQUARE_RIGHT      {$$ = $2->code;}
                         ;
 
-assignment : declared PLUS_ASSIGNMENT expression       {$$ = createRecord(cat3($1->code, "+=", $3->code));}
-           | declared MINUS_ASSIGNMENT expression      {$$ = createRecord(cat3($1->code, "-=", $3->code));}
-           | declared MULT_ASSIGNMENT expression       {$$ = createRecord(cat3($1->code, "*=", $3->code));}
-           | declared DIVIDE_ASSIGNMENT expression     {$$ = createRecord(cat3($1->code, "/=", $3->code));}
-           | declared ASSIGNMENT expression            {$$ = createRecord(cat3($1->code, "=", $3->code));}
+assignment : declared PLUS_ASSIGNMENT expression       {$$ = binaryOperation($1, "+=", $3);}
+           | declared MINUS_ASSIGNMENT expression      {$$ = binaryOperation($1, "-=", $3);}
+           | declared MULT_ASSIGNMENT expression       {$$ = binaryOperation($1, "*=", $3);}
+           | declared DIVIDE_ASSIGNMENT expression     {$$ = binaryOperation($1, "/=", $3);}
+           | declared ASSIGNMENT expression            {$$ = binaryOperation($1, "=", $3);}
            ;
 
 /* Será necessário mudar para que as funções recebam parâmetros por referência
@@ -418,23 +428,24 @@ expression      : declared                              {$$ = $1; /*$$->code = c
                         $$->array = createArray("char*", 1);
                         arrayAdd($$->array, $$->text);
                         $$->code = cat5("create",$1->text, "(", $1->code, ")");
+                        $$->text = strdup("LITERAL");
                 }
                 | casting                               {$$ = $1;}
-                | expression OR expression              {$$ = binaryExpression($1, "||", $3);}
-                | expression AND expression             {$$ = binaryExpression($1, "&&", $3);}
-                | expression EQUALS expression          {$$ = binaryExpression($1, "==", $3);}
-                | expression NOT_EQUAL expression       {$$ = binaryExpression($1, "!=", $3);}
-                | expression LESS_THAN expression       {$$ = binaryExpression($1, "<", $3);}
-                | expression MORE_THAN expression       {$$ = binaryExpression($1, ">", $3);}
-                | expression LESS_OR_EQUAL expression   {$$ = binaryExpression($1, "<=", $3);}
-                | expression MORE_OR_EQUAL expression   {$$ = binaryExpression($1, ">=", $3);}
-                | expression ADD expression             {$$ = binaryExpression($1, "+", $3);}
-                | expression MINUS expression           {$$ = binaryExpression($1, "-", $3);}
-                | expression MULT expression            {$$ = binaryExpression($1, "*", $3);}
-                | expression DIV expression             {$$ = binaryExpression($1, "/", $3);}
-                | expression DIV_QUOTIENT expression    {$$ = binaryExpression($1, "quotient", $3);}
-                | expression DIV_REMAINDER expression   {$$ = binaryExpression($1, "remainder", $3);}
-                | expression EXP expression             {$$ = exponentExpression($1, $3);}
+                | expression OR expression              {$$ = binaryOperation($1, "||", $3);}
+                | expression AND expression             {$$ = binaryOperation($1, "&&", $3);}
+                | expression EQUALS expression          {$$ = binaryOperation($1, "==", $3);}
+                | expression NOT_EQUAL expression       {$$ = binaryOperation($1, "!=", $3);}
+                | expression LESS_THAN expression       {$$ = binaryOperation($1, "<", $3);}
+                | expression MORE_THAN expression       {$$ = binaryOperation($1, ">", $3);}
+                | expression LESS_OR_EQUAL expression   {$$ = binaryOperation($1, "<=", $3);}
+                | expression MORE_OR_EQUAL expression   {$$ = binaryOperation($1, ">=", $3);}
+                | expression ADD expression             {$$ = binaryOperation($1, "+", $3);}
+                | expression MINUS expression           {$$ = binaryOperation($1, "-", $3);}
+                | expression MULT expression            {$$ = binaryOperation($1, "*", $3);}
+                | expression DIV expression             {$$ = binaryOperation($1, "/", $3);}
+                | expression DIV_QUOTIENT expression    {$$ = binaryOperation($1, "quotient", $3);}
+                | expression DIV_REMAINDER expression   {$$ = binaryOperation($1, "remainder", $3);}
+                | expression EXP expression             {$$ = binaryOperation($1, "^", $3);}
                 | NOT expression                        {$$ = createRecord(cat2("!", $2->code)); $$->array = copy($2->array, "Array");}
                 | MINUS expression %prec UMINUS         {$$ = createRecord(cat2("-", $2->code)); $$->array = copy($2->array, "Array");}
                 | PAREN_LEFT expression PAREN_RIGHT     {$$ = createRecord(cat3("(", $2->code, ")")); $$->array = copy($2->array, "Array");}
@@ -570,7 +581,7 @@ int isSameType(struct record *a, struct record *b){
         return equals(a->array, b->array, "Array");
 }
 
-struct record * binaryExpression(struct record *a, char* operation, struct record *b){
+struct record * binaryOperation(struct record *a, char* operation, struct record *b){
         if(!equals(a->array, b->array, "Array")){
                 yyerror("Error comparing expressions");
                 printf("Incompatible expression type: \"%s\" is of type ", a->code); 
@@ -580,46 +591,9 @@ struct record * binaryExpression(struct record *a, char* operation, struct recor
                 printf("\n"); 
                 exit(1);
         }
-        char* code;
+        char* code = codeFromOperator(a->code, operation, b->code, arrayGet(a->array, 0));
 
-printf("1");
-        if(strcmp(operation, "+") == 0){
-printf("2");
-                if(strcmp(arrayGet(a->array, 0), "Float") == 0){
-printf("3");
-                        code = cat4space("addFloat(", a->code, b->code,")");
-                } else {
-printf("4");
-                        code = cat4space("addInt(", a->code, b->code,")");
-                }
-        } else {
-printf("5");
-                code = cat3space(a->code, operation, b->code);
-        }
-
-        struct record* rec = createRecord(code);
-        rec->array = copy(a->array, "Array");
-        return rec;
-}
-
-struct record * exponentExpression(struct record *a, struct record *b){
-        if(!equals(a->array, b->array, "Array")){
-                yyerror("Error comparing expressions");
-                printf("Incompatible expression type: \"%s\" is of type ", a->code); 
-                print(a->array, "Array");
-                printf(" and \"%s\" is of type ", b->code); 
-                print(b->array, "Array");
-                printf("\n"); 
-                exit(1);
-        }
-
-        char* code;
-        if(strcmp(arrayGet(a->array, 0), "Float") == 0){
-         code = cat5space("exponentf(",a->code, ",", b->code, ")");
-        } else {
-         code = cat5space("exponenti(",a->code, ",", b->code, ")");
-        }
-
+        printf("%s", code);
         struct record* rec = createRecord(code);
         rec->array = copy(a->array, "Array");
         return rec;

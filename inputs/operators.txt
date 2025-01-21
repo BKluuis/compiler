@@ -1,11 +1,11 @@
 begin
     var
         Bool name;
-        Int x = 10;                 \* int* x *\
-        Array<Int> y;           \* int* y *\
-        Array<Array<Int>> z;      \* Float** z *\
-        Map<String, Float> map;     \*  *\
-        Stack<String> stack;        \*  *\
+        Int x = 10;
+        Array<Int> y;
+        Array<Array<Int>> z = y;
+        Map<String, Float> map;
+        Stack<String> stack;
         Array<Map<String, Int>, Map<Bool, Bool>> aaaaa;
         Array<Map<Map<String, String>, Int>, Map<Bool, Bool>> bbbb;
         Map<String, Array<Array<Int>>> mapaMatriz;

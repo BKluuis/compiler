@@ -13,19 +13,19 @@
 char *typeFromToken(char *type) {
   char *s = NULL;
 
-  if (strcmp(type, "Int") == 0) {
+  if (equals(type, "Int", "char*")) {
     s = strdup("int*");
-  } else if (strcmp(type, "Bool") == 0) {
+  } else if (equals(type, "Bool", "char*")) {
     s = strdup("int*");
-  } else if (strcmp(type, "Float") == 0) {
+  } else if (equals(type, "Float", "char*")) {
     s = strdup("float*");
-  } else if (strcmp(type, "String") == 0) {
+  } else if (equals(type, "String", "char*")) {
     s = strdup("String*");
-  } else if (strcmp(type, "Map") == 0) {
+  } else if (equals(type, "Map", "char*")) {
     s = strdup("Map*");
-  } else if (strcmp(type, "Array") == 0) {
+  } else if (equals(type, "Array", "char*")) {
     s = strdup("Array*");
-  } else if (strcmp(type, "Stack") == 0) {
+  } else if (equals(type, "Stack", "char*")) {
     s = strdup("Stack*");
   } else {
     fprintf(
@@ -40,19 +40,19 @@ char *typeFromToken(char *type) {
 char *createFromType(char *type, char *args) {
   char *s = NULL;
 
-  if (strcmp(type, "Int") == 0) {
+  if (equals(type, "Int", "char*")) {
     s = cat3("createInt(", args, ")");
-  } else if (strcmp(type, "Bool") == 0) {
+  } else if (equals(type, "Bool", "char*")) {
     s = cat3("createBool(", args, ")");
-  } else if (strcmp(type, "Float") == 0) {
+  } else if (equals(type, "Float", "char*")) {
     s = cat3("createFloat(", args, ")");
-  } else if (strcmp(type, "String") == 0) {
+  } else if (equals(type, "String", "char*")) {
     s = cat3("createString(", args, ")");
-  } else if (strcmp(type, "Map") == 0) {
+  } else if (equals(type, "Map", "char*")) {
     s = cat3("createMap(", args, ")");
-  } else if (strcmp(type, "Array") == 0) {
+  } else if (equals(type, "Array", "char*")) {
     s = cat3("createArray(", args, ")");
-  } else if (strcmp(type, "Stack") == 0) {
+  } else if (equals(type, "Stack", "char*")) {
     s = cat3("createStack(", args, ")");
   } else {
     fprintf(stderr,
@@ -65,7 +65,7 @@ char *createFromType(char *type, char *args) {
   return s;
 }
 
-// Array, Stack e Map não realizam uma comparação profunda
+// Stack não realizam uma comparação profunda
 int equals(void *a, void *b, char *type) {
   if (strcmp(type, "Int") == 0) {
     return *(int *)a == *(int *)b;
@@ -92,25 +92,25 @@ int equals(void *a, void *b, char *type) {
 void print(void *data, char *type) {
   if (!data) {
     printf("null");
-  } else if (strcmp(type, "Int") == 0) {
+  } else if (equals(type, "Int", "char*")) {
     printf("%d", *(int *)data);
-  } else if (strcmp(type, "Float") == 0) {
+  } else if (equals(type, "Float", "char*")) {
     printf("%f", *(float *)data);
-  } else if (strcmp(type, "String") == 0) {
+  } else if (equals(type, "String", "char*")) {
     printString(data);
-  } else if (strcmp(type, "char*") == 0) {
+  } else if (equals(type, "char*", "char*")) {
     printf("%s", data);
-  } else if (strcmp(type, "Map") == 0) {
+  } else if (equals(type, "Map", "char*")) {
     printMap(data);
-  } else if (strcmp(type, "Array") == 0) {
+  } else if (equals(type, "Array", "char*")) {
     printArray(data);
-  } else if (strcmp(type, "Stack") == 0) {
+  } else if (equals(type, "Stack", "char*")) {
     printStack(data);
-  } else if (strcmp(type, "typeEntry") == 0) {
+  } else if (equals(type, "typeEntry", "char*")) {
     printTypeEntry(data);
-  } else if (strcmp(type, "varEntry") == 0) {
+  } else if (equals(type, "varEntry", "char*")) {
     printVarEntry(data);
-  } else if (strcmp(type, "funcEntry") == 0) {
+  } else if (equals(type, "funcEntry", "char*")) {
     printFuncEntry(data);
   } else {
     printf("Error while printing: no printing defined for type %s\n", type);
@@ -125,10 +125,10 @@ record *access(char *varName, Array *types, Array *accessors, int typeIndex,
   char *curType = (char *)arrayGet(types, typeIndex);
   Map *curAccessor = (Map *)arrayGet(accessors, accessIndex);
 
-  if (strcmp(curType, "Map") == 0) {
+  if (equals(curType, "Map", "char*")) {
     out->code = cat5("accessMap(", varName, ",", curAccessor->keys[0], ")");
     next = 2;
-  } else if (strcmp(curType, "Array") == 0) {
+  } else if (equals(curType, "Array", "char*")) {
     out->code = cat5("accessArray(", varName, ",", curAccessor->keys[0], ")");
   }
 
@@ -152,23 +152,23 @@ record *access(char *varName, Array *types, Array *accessors, int typeIndex,
 void delete(void *data, char *type) {
   if (!data) {
     return;
-  } else if (strcmp(type, "Int") == 0) {
+  } else if (equals(type, "Int", "char*")) {
     free(data);
-  } else if (strcmp(type, "Float") == 0) {
+  } else if (equals(type, "Float", "char*")) {
     free(data);
-  } else if (strcmp(type, "String") == 0) {
+  } else if (equals(type, "String", "char*")) {
     deleteString(data);
-  } else if (strcmp(type, "Map") == 0) {
+  } else if (equals(type, "Map", "char*")) {
     deleteMap(data);
-  } else if (strcmp(type, "Array") == 0) {
+  } else if (equals(type, "Array", "char*")) {
     deleteArray(data);
-  } else if (strcmp(type, "typeEntry") == 0) {
+  } else if (equals(type, "typeEntry", "char*")) {
     deleteTypeEntry(data);
-  } else if (strcmp(type, "varEntry") == 0) {
+  } else if (equals(type, "varEntry", "char*")) {
     deleteVarEntry(data);
-  } else if (strcmp(type, "funcEntry") == 0) {
+  } else if (equals(type, "funcEntry", "char*")) {
     deleteFuncEntry(data);
-  } else if (strcmp(type, "char*") == 0) {
+  } else if (equals(type, "char*", "char*")) {
     free(data);
   } else {
     fprintf(stderr, "Error: type %s doesn't implement delete\n", type);
@@ -178,23 +178,23 @@ void delete(void *data, char *type) {
 }
 
 void *copy(void *data, char *type) {
-  if (strcmp(type, "Int") == 0) {
+  if (equals(type, "Int", "char*")) {
     return copyInteger(data);
-  } else if (strcmp(type, "Float") == 0) {
+  } else if (equals(type, "Float", "char*")) {
     return copyFloat(data);
-  } else if (strcmp(type, "char*") == 0) {
+  } else if (equals(type, "char*", "char*")) {
     return strdup(data);
-  } else if (strcmp(type, "String") == 0) {
+  } else if (equals(type, "String", "char*")) {
     copyString(data);
-  } else if (strcmp(type, "Array") == 0) {
+  } else if (equals(type, "Array", "char*")) {
     return copyArray(data);
-  } else if (strcmp(type, "Map") == 0) {
+  } else if (equals(type, "Map", "char*")) {
     return copyMap(data);
-  } else if (strcmp(type, "typeEntry") == 0) {
+  } else if (equals(type, "typeEntry", "char*")) {
     return copyTypeEntry(data);
-  } else if (strcmp(type, "varEntry") == 0) {
+  } else if (equals(type, "varEntry", "char*")) {
     return copyVarEntry(data);
-  } else if (strcmp(type, "funcEntry") == 0) {
+  } else if (equals(type, "funcEntry", "char*")) {
     return copyFuncEntry(data);
   } else {
     fprintf(stderr, "Error: type %s doesn't implement copy\n", type);
@@ -203,9 +203,10 @@ void *copy(void *data, char *type) {
 }
 
 char *cast(char *data, char *newType, char *oldType) {
-  if (strcmp(newType, "Int") == 0 && strcmp(oldType, "Float") == 0) {
+  if (equals(newType, "Int", "char*") && equals(oldType, "Float", "char*")) {
     return cat3("castftoi(", data, ")");
-  } else if (strcmp(newType, "Float") == 0 && strcmp(newType, "Float") == 0) {
+  } else if (equals(newType, "Float", "char*") &&
+             equals(newType, "Float", "char*")) {
     return cat3("castitof(", data, ")");
   } else {
     fprintf(stderr, "Error: type %s doesn't implement casting to %s\n", oldType,

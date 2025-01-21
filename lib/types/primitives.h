@@ -9,15 +9,19 @@ int *createInt(int);
 float *createFloat(float);
 int *createBool(int);
 
-float *intToFloat(int);
-
 float *addFloat(float *a, float *b);
 int *addInt(int *a, int *b);
 
-float *exponentf(float a, float b);
-int *exponenti(int a, int b);
+float *subtractFloat(float *a, float *b);
+int *subtractInt(int *a, int *b);
 
-float *castitof(int i);
-int *castftoi(float f);
+float *exponentFloat(float *a, float *b);
+int *exponentInt(int *a, int *b);
+
+void assignFloat(float *a, float *b);
+void assignInt(int *a, int *b);
+
+float *castitof(int *i);
+int *castftoi(float *f);
 
 #endif

@@ -18,17 +18,6 @@ int *swap(int *a, int *b) {
   return temp;
 }
 
-void *createArray2(char *type, int size) {
-  // typeEntry t = mapGet(typesMap, type);
-  // int tam = t.size;
-  void *arr = malloc(sizeof(int) * size);
-  if (arr == NULL) {
-    printf("Não foi possível iniciar Array");
-    exit(2);
-  }
-  return arr;
-}
-
 int main() {
   initGlobals();
 
@@ -55,6 +44,8 @@ int main() {
 
   print(myArray, "Array");
 
-  cleanupGlobals();
+  for (createArray(""))
+
+    cleanupGlobals();
   return 0;
 }
